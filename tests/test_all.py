@@ -16,6 +16,7 @@ import time
 import unittest
 import urllib.error
 import urllib.request
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -1095,6 +1096,236 @@ class TestEntrypointGuards(unittest.TestCase):
         self.assertIn("key: PSYCHREPORT_PASSPHRASE", blueprint)
         self.assertIn("generateValue: true", blueprint)
         self.assertTrue(os.path.exists(os.path.join(root, "requirements.txt")))
+
+
+
+# --------------------------------------------------------------------------
+# Bring-your-own model key (per signed-in session)
+# --------------------------------------------------------------------------
+
+STUB_KEY = "sk-or-v1-TESTKEY0000000000000000000000000000deadbeef"
+
+
+class _StubModel(BaseHTTPRequestHandler):
+    """Stands in for OpenRouter: records what it was sent, and can be told to
+    reject the next key the way a provider rejects a bad one."""
+
+    reject = False
+    seen = []
+
+    def log_message(self, *args):
+        pass
+
+    def do_POST(self):
+        length = int(self.headers.get("Content-Length") or 0)
+        body = json.loads(self.rfile.read(length) or b"{}")
+        _StubModel.seen.append({"auth": self.headers.get("Authorization", ""),
+                                "model": body.get("model"),
+                                "text": json.dumps(body)})
+        if _StubModel.reject:
+            self.send_response(401)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        payload = json.dumps({"choices": [{"message": {"content": "Model answer from the stub."}}]}).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
+
+
+class TestSessionModelKey(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.store = fresh_store(cls.tmp.name)
+        seed(cls.store)
+        cls.httpd = serve(api.router, lambda: api.Context(cls.store), "127.0.0.1", 0)
+        threading.Thread(target=cls.httpd.serve_forever, daemon=True).start()
+        cls.base = "http://127.0.0.1:%d" % cls.httpd.server_address[1]
+        cls.stub = ThreadingHTTPServer(("127.0.0.1", 0), _StubModel)
+        threading.Thread(target=cls.stub.serve_forever, daemon=True).start()
+        cls.stub_url = "http://127.0.0.1:%d/v1" % cls.stub.server_address[1]
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.httpd.shutdown(); cls.httpd.server_close()
+        cls.stub.shutdown(); cls.stub.server_close()
+        cls.tmp.cleanup()
+
+    def setUp(self):
+        api.reset_session_llm()
+        _StubModel.reject = False
+        _StubModel.seen = []
+
+    def client(self, username="dr.chen", password="Demo!Pass1"):
+        client = Client(self.base)
+        client.post("/api/login", {"username": username, "password": password})
+        return client
+
+    def configure(self, client, expect=200, **overrides):
+        body = {"api_key": STUB_KEY, "model": "openai/gpt-4o-mini", "base_url": self.stub_url}
+        body.update(overrides)
+        return client.post("/api/llm/session", body, expect=expect)
+
+    def test_key_is_accepted_and_used_but_never_echoed_back(self):
+        client = self.client()
+        result = self.configure(client)
+        self.assertTrue(result["llm"]["enabled"])
+        self.assertTrue(result["llm"]["user_supplied"])
+        self.assertTrue(result["llm"]["deidentify_before_send"])
+        self.assertEqual(result["llm"]["key_hint"], "..." + STUB_KEY[-4:])
+        self.assertNotIn(STUB_KEY, json.dumps(result))
+
+        boot = client.get("/api/bootstrap")
+        self.assertTrue(boot["llm"]["enabled"])
+        self.assertNotIn(STUB_KEY, json.dumps(boot))
+
+        # The model is actually called, with the key, for this session.
+        patients = client.get("/api/patients")["patients"]
+        maya = [p for p in patients if p["mrn"] == "MRN-00101"][0]
+        answer = client.post("/api/patients/%d/assistant" % maya["id"],
+                             {"question": "What is the current medication?"})
+        self.assertEqual(answer["mode"], "model")
+        self.assertEqual(_StubModel.seen[-1]["auth"], "Bearer " + STUB_KEY)
+        self.assertEqual(_StubModel.seen[-1]["model"], "openai/gpt-4o-mini")
+
+    def test_patient_identifiers_are_stripped_before_reaching_the_model(self):
+        client = self.client()
+        self.configure(client)
+        patients = client.get("/api/patients")["patients"]
+        maya = [p for p in patients if p["mrn"] == "MRN-00101"][0]
+        # a question whose excerpts do carry the patient's name
+        result = client.post("/api/patients/%d/assistant" % maya["id"],
+                             {"question": "What is the history of present illness?"})
+        sent = _StubModel.seen[-1]["text"]
+        self.assertIn("Ellison", "".join(c["excerpt"] for c in result["citations"]),
+                      "the excerpt really does name her, so the scrub is being tested")
+        self.assertNotIn("Ellison", sent)
+        self.assertNotIn("1991-04-18", sent)
+        self.assertIn("[NAME]", sent)
+        self.assertIn("[DATE]", sent)
+        self.assertTrue(any("de-identified" in n for n in result["notes"]))
+
+    def test_a_key_is_scoped_to_the_session_that_entered_it(self):
+        owner = self.client()
+        self.configure(owner)
+        other = self.client()          # same account, a different sign-in
+        self.assertFalse(other.get("/api/bootstrap")["llm"]["enabled"])
+        self.assertTrue(owner.get("/api/bootstrap")["llm"]["enabled"])
+
+    def test_key_is_forgotten_on_sign_out(self):
+        client = self.client()
+        self.configure(client)
+        client.post("/api/logout")
+        again = self.client()
+        self.assertFalse(again.get("/api/bootstrap")["llm"]["enabled"])
+
+    def test_key_can_be_removed(self):
+        client = self.client()
+        self.configure(client)
+        client.request("DELETE", "/api/llm/session", {})
+        self.assertFalse(client.get("/api/bootstrap")["llm"]["enabled"])
+
+    def test_a_rejected_key_is_reported_and_not_stored(self):
+        client = self.client()
+        _StubModel.reject = True
+        try:
+            client.post("/api/llm/session", {"api_key": STUB_KEY, "base_url": self.stub_url}, expect=400)
+        finally:
+            _StubModel.reject = False
+        self.assertFalse(client.get("/api/bootstrap")["llm"]["enabled"])
+
+    def test_input_is_validated(self):
+        client = self.client()
+        self.configure(client, api_key="short", expect=400)
+        self.configure(client, model="not a model!", expect=400)
+        self.configure(client, base_url="ftp://example.com/v1", expect=400)
+        # plain http to a remote host would put the content on the wire in clear
+        self.configure(client, base_url="http://example.com/v1", expect=400)
+
+    def test_roles_without_model_use_are_refused(self):
+        staff = self.client("frontdesk", "Demo!Pass3")
+        self.configure(staff, expect=403)
+        auditor = self.client("compliance", "Demo!Pass4")
+        self.configure(auditor, expect=403)
+
+    def test_key_never_reaches_the_audit_log_or_the_database(self):
+        client = self.client()
+        self.configure(client)
+        supervisor = self.client("dr.reyes", "Demo!Pass2")
+        entries = supervisor.get("/api/audit?limit=200")["entries"]
+        self.assertIn("llm.session.configure", {e["action"] for e in entries})
+        self.assertNotIn(STUB_KEY, json.dumps(entries))
+        with open(self.store.path, "rb") as handle:
+            raw = handle.read()
+        for suffix in ("-wal", "-shm"):
+            if os.path.exists(self.store.path + suffix):
+                with open(self.store.path + suffix, "rb") as handle:
+                    raw += handle.read()
+        self.assertNotIn(STUB_KEY.encode(), raw)
+
+    def test_session_key_does_not_need_the_service_wide_env_flag(self):
+        cfg = llm.LLMConfig.for_session(STUB_KEY, "openai/gpt-4o-mini", "https://openrouter.ai/api/v1")
+        self.assertTrue(llm.usable(cfg))
+        self.assertFalse(cfg.is_local)
+        self.assertIsNone(cfg.status()["blocked_reason"])
+        # ...while an operator-configured remote endpoint still does.
+        operator = llm.LLMConfig(provider="openai", base_url="https://openrouter.ai/api/v1",
+                                 model="m", api_key="k", allow_remote_phi=False)
+        self.assertFalse(llm.usable(operator))
+
+    def test_language_pass_masks_identifiers_and_restores_them(self):
+        """A rewrite has to come back with the names in it, so identifiers make
+        the round trip as markers rather than being stripped."""
+        cfg = llm.LLMConfig.for_session(STUB_KEY, "m", self.stub_url)
+        original = "Maya Ellison was seen on 2026-07-14 and her PHQ-9 was 18."
+
+        def echo(system, user, max_tokens=900, temperature=0.2, cfg=None):
+            echo.sent = user
+            return user.split("Text:\n", 1)[1]
+
+        echo.sent = ""
+        real = llm.complete
+        llm.complete = echo
+        try:
+            out, note = llm.polish(original, "Family", "plain", cfg=cfg, identifiers=["Maya", "Ellison"])
+        finally:
+            llm.complete = real
+        self.assertNotIn("Ellison", echo.sent)
+        self.assertNotIn("2026-07-14", echo.sent)
+        self.assertIn("\u00ab1\u00bb", echo.sent)
+        self.assertIn("Ellison", out)
+        self.assertIn("2026-07-14", out)
+        self.assertIsNone(note)
+
+    def test_language_pass_rejects_a_rewrite_that_drops_identifiers(self):
+        cfg = llm.LLMConfig.for_session(STUB_KEY, "m", self.stub_url)
+        original = "Maya Ellison was seen on 2026-07-14."
+        real = llm.complete
+        llm.complete = lambda *a, **k: "Someone was seen at some point."
+        try:
+            out, note = llm.polish(original, "Family", "plain", cfg=cfg, identifiers=["Maya", "Ellison"])
+        finally:
+            llm.complete = real
+        self.assertEqual(out, original)
+        self.assertIn("did not return the identifiers", note)
+
+    def test_generated_reports_use_the_session_key_for_the_language_pass(self):
+        client = self.client()
+        self.configure(client)
+        patients = client.get("/api/patients")["patients"]
+        maya = [p for p in patients if p["mrn"] == "MRN-00101"][0]
+        detail = client.get("/api/patients/%d" % maya["id"])
+        report = client.post("/api/patients/%d/reports" % maya["id"], {
+            "template_ids": ["therapist_care_team"], "ai_polish": True,
+            "eval_ids": [e["id"] for e in detail["evaluations"]]})["reports"][0]
+        self.assertTrue(_StubModel.seen, "the language pass should have called the model")
+        self.assertEqual(_StubModel.seen[-1]["auth"], "Bearer " + STUB_KEY)
+        # The stub's reply invents nothing, but it is still fact-guarded, and the
+        # draft records that AI language was involved either way.
+        self.assertIn("ai_assisted", report["content"])
 
 
 if __name__ == "__main__":

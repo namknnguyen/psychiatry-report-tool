@@ -129,6 +129,9 @@ class Router:
     def put(self, pattern):
         return lambda fn: (self.add("PUT", pattern, fn), fn)[1]
 
+    def delete(self, pattern):
+        return lambda fn: (self.add("DELETE", pattern, fn), fn)[1]
+
     def match(self, method: str, path: str):
         allowed = False
         for route_method, regex, handler in self.routes:

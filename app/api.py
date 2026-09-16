@@ -12,9 +12,11 @@ from typing import List, Optional
 import threading
 import time
 
-from . import assistant, audit, auth, config, generator, llm, redaction
+from . import assistant, audit, auth, config, crypto, generator, llm, redaction
 from .db import Store, now
 from .forms import FORMS, SENSITIVITY_LABELS, SPECIALLY_PROTECTED, required_fields
+from urllib.parse import urlparse
+
 from .server import HttpError, Request, Response, Router
 from .templates import TEMPLATES
 
@@ -45,6 +47,8 @@ def current_user(ctx: Context, req: Request) -> dict:
     user, error = auth.resolve_session(ctx.store, token)
     if user is None:
         raise HttpError(401, error or "Please sign in.")
+    # Remember whose model key applies for the rest of this request.
+    _current.llm = _session_llm(token)
     return user
 
 
@@ -238,6 +242,7 @@ def logout(ctx: Context, req: Request):
         auth.end_session(ctx.store, token)
         if user:
             audit.log(ctx.store, user, "logout")
+        _forget_session_llm(token)
     response = Response({"ok": True})
     response.set_cookie(SESSION_COOKIE, "", max_age=0)
     return response
@@ -252,6 +257,102 @@ def me(ctx: Context, req: Request):
         "permissions": sorted(auth.PERMISSIONS[user["role"]]),
         "idle_timeout": auth.IDLE_TIMEOUT,
     }
+
+
+# --------------------------------------------------------------------------
+# Bring-your-own model key, scoped to one signed-in session
+#
+# Keys live in this process's memory only: never in the database, never in the
+# audit log, never in a response body, and gone on sign-out or restart. On a
+# shared demo URL a single service-wide key would be spent by every visitor, so
+# each person supplies their own and only their own requests use it.
+# --------------------------------------------------------------------------
+
+_current = threading.local()
+_llm_lock = threading.Lock()
+_llm_sessions: dict = {}
+LLM_SESSION_LIMIT = 200
+
+
+def _session_key(token: Optional[str]) -> Optional[str]:
+    return crypto.token_fingerprint(token) if token else None
+
+
+def _session_llm(token: Optional[str]):
+    key = _session_key(token)
+    if not key:
+        return None
+    with _llm_lock:
+        entry = _llm_sessions.get(key)
+    return entry[1] if entry else None
+
+
+def _remember_session_llm(token: str, cfg) -> None:
+    key = _session_key(token)
+    with _llm_lock:
+        if len(_llm_sessions) >= LLM_SESSION_LIMIT:
+            oldest = min(_llm_sessions, key=lambda k: _llm_sessions[k][0])
+            _llm_sessions.pop(oldest, None)
+        _llm_sessions[key] = (now(), cfg)
+
+
+def _forget_session_llm(token: Optional[str]) -> None:
+    key = _session_key(token)
+    if key:
+        with _llm_lock:
+            _llm_sessions.pop(key, None)
+
+
+def reset_session_llm() -> None:
+    with _llm_lock:
+        _llm_sessions.clear()
+
+
+def _llm_status(req: Request) -> dict:
+    cfg = _session_llm(req.cookie(SESSION_COOKIE)) or llm.CONFIG
+    return cfg.status()
+
+
+@router.post("/api/llm/session")
+def configure_session_llm(ctx: Context, req: Request):
+    user = current_user(ctx, req)
+    if not (auth.can(user, "assistant.use") or auth.can(user, "report.generate")):
+        raise HttpError(403, "Your role does not use the language model.")
+    body = req.json
+    api_key = str(body.get("api_key", "")).strip()
+    model = str(body.get("model", "")).strip() or llm.DEFAULT_OPENROUTER_MODEL
+    base_url = str(body.get("base_url", "")).strip() or llm.OPENROUTER_BASE_URL
+
+    if not 8 <= len(api_key) <= 400 or any(c.isspace() for c in api_key):
+        raise HttpError(400, "That does not look like an API key.")
+    if not re.match(r"^[A-Za-z0-9._:/-]{1,100}$", model):
+        raise HttpError(400, "Model ids contain letters, digits and . _ - / : only.")
+    parsed = urlparse(base_url)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        raise HttpError(400, "The endpoint must be a full http(s) URL.")
+    if parsed.scheme == "http" and parsed.hostname not in llm.LOCAL_HOSTS:
+        raise HttpError(400, "Refusing to send content over plain http to a remote endpoint. "
+                             "Use an https endpoint.")
+
+    cfg = llm.LLMConfig.for_session(api_key, model, base_url)
+    ok, message = llm.verify(cfg)
+    if not ok:
+        # Nothing is stored, so a mistyped key never becomes a silent fallback.
+        audit.log(ctx.store, user, "llm.session.rejected", detail="%s %s" % (parsed.hostname, model))
+        raise HttpError(400, message)
+
+    _remember_session_llm(req.cookie(SESSION_COOKIE), cfg)
+    audit.log(ctx.store, user, "llm.session.configure",
+              detail="%s %s" % (parsed.hostname, model))
+    return {"llm": cfg.status(), "message": message}
+
+
+@router.delete("/api/llm/session")
+def clear_session_llm(ctx: Context, req: Request):
+    user = current_user(ctx, req)
+    _forget_session_llm(req.cookie(SESSION_COOKIE))
+    audit.log(ctx.store, user, "llm.session.cleared")
+    return {"llm": llm.CONFIG.status()}
 
 
 @router.get("/api/bootstrap")
@@ -269,7 +370,8 @@ def bootstrap(ctx: Context, req: Request):
         "protected_classes": list(SPECIALLY_PROTECTED),
         "practice": ctx.practice,
         "hosted": config.HOSTED,
-        "llm": llm.CONFIG.status(),
+        "llm": _llm_status(req),
+        "llm_defaults": {"base_url": llm.OPENROUTER_BASE_URL, "model": llm.DEFAULT_OPENROUTER_MODEL},
         "crisis_resources": redaction.CRISIS_RESOURCES,
     }
 
@@ -558,11 +660,14 @@ def _build(ctx: Context, patient_row, template_id: str, eval_ids: List[int], cli
     )
     content["authorization"] = authorization
     if options.get("ai_polish"):
-        content = _ai_polish(content, template)
+        content = _ai_polish(content, template, identifiers=[
+            demographics.get("first_name", ""), demographics.get("last_name", ""),
+            demographics.get("preferred_name", "")])
     return content
 
 
-def _ai_polish(content: dict, template: dict) -> dict:
+def _ai_polish(content: dict, template: dict, identifiers=()) -> dict:
+    cfg = getattr(_current, "llm", None)
     notes = []
     changed = 0
     for section in content["sections"]:
@@ -570,7 +675,8 @@ def _ai_polish(content: dict, template: dict) -> dict:
             continue
         if section["kind"] == "narrative":
             original = "\n\n".join(str(b) for b in section["body"])
-            polished, note = llm.polish(original, template["recipient_type"], template["reading_level"])
+            polished, note = llm.polish(original, template["recipient_type"],
+                                        template["reading_level"], cfg=cfg, identifiers=identifiers)
             if note:
                 notes.append(f"{section['title']}: {note}")
             if polished != original:
@@ -580,7 +686,8 @@ def _ai_polish(content: dict, template: dict) -> dict:
         else:
             new_items = []
             for item in section["body"]:
-                polished, note = llm.polish(item, template["recipient_type"], template["reading_level"])
+                polished, note = llm.polish(item, template["recipient_type"],
+                                            template["reading_level"], cfg=cfg, identifiers=identifiers)
                 if note:
                     notes.append(f"{section['title']}: {note}")
                 new_items.append(polished)
@@ -941,7 +1048,8 @@ def ask_assistant(ctx: Context, req: Request):
     demographics = ctx.store.payload("patients", patient_row)
     names = [demographics.get("first_name", ""), demographics.get("last_name", ""),
              demographics.get("preferred_name", "")]
-    result = assistant.answer(question, evaluations, reports, names)
+    result = assistant.answer(question, evaluations, reports, names,
+                              llm_cfg=_session_llm(req.cookie(SESSION_COOKIE)))
     ctx.store.insert_sealed("assistant_messages", {
         "patient_id": patient_id, "user_id": user["id"], "role": "user", "ts": now()},
         {"text": question})

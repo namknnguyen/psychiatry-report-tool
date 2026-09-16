@@ -233,6 +233,9 @@ function topbar() {
     ${S.patient && S.patient.risk && S.patient.risk.level !== 'Not documented' ? riskBadge(S.patient.risk.level) : ''}
     <div class="who">${esc(u.display_name)}${u.credentials ? ', ' + esc(u.credentials) : ''}
       · ${esc(S.me.role_label)}<br>
+      ${perms.indexOf('assistant.use') >= 0 || perms.indexOf('report.generate') >= 0
+        ? `<button class="btn ghost sm mt1" data-a="llm-settings">AI model${
+            S.boot && S.boot.llm && S.boot.llm.user_supplied ? ' ✓' : ''}</button>` : ''}
       <button class="btn ghost sm mt1" data-a="start-tour" data-tour="tour-button">Tour</button>
       <button class="btn ghost sm mt1" data-a="logout" >Sign out</button></div>
   </div>`;
@@ -441,8 +444,9 @@ function generateTab(d) {
         <label class="checkline m0"><input type="checkbox" data-gen-opt="polish"
             ${S.gen.polish ? 'checked' : ''} ${S.boot.llm.enabled ? '' : 'disabled'}>
           <span>AI language pass ${S.boot.llm.enabled
-            ? '<span class="badge">' + esc(S.boot.llm.model) + (S.boot.llm.local ? ' · local' : ' · remote, de-identified') + '</span>'
+            ? '<span class="badge">' + esc(S.boot.llm.model) + (S.boot.llm.deidentify_before_send ? ' · de-identified before sending' : ' · local') + '</span>'
             : '<span class="badge grey">no model configured — drafts are composed deterministically</span>'}</span></label>
+        ${S.boot.llm.enabled ? '' : '<button class="btn ghost sm" data-a="llm-settings">Use your own key</button>'}
         <label class="checkline m0" ><input type="checkbox" data-gen-opt="deid" ${S.gen.deid ? 'checked' : ''}>
           <span>De-identify (Safe Harbor) — for teaching or research use</span></label>
         <div class="push">
@@ -579,7 +583,8 @@ function assistantTab() {
   return `<div class="card" data-tour="assistant"><h3>Assistant</h3>
       <p class="small muted">Scoped to this patient's chart and reports. It answers with citations, declines clinical directives, and never sees psychotherapy process notes.
       ${llm.enabled ? (llm.local ? 'A local model is configured, so nothing leaves this machine.' : 'A remote model is configured; content is de-identified before it is sent.')
-        : 'No model is configured — answers are exact quotations retrieved from the chart.'}</p>
+        : 'No model is configured — answers are exact quotations retrieved from the chart.'}
+      ${S.boot.llm.enabled ? '' : '<button class="btn ghost sm" data-a="llm-settings">Use your own model key</button>'}</p>
       <div class="suggest">${SUGGESTIONS.map((s) => `<button data-a="suggest" data-q="${esc(s)}">${esc(s)}</button>`).join('')}
         <button data-a="completeness">Check documentation completeness</button></div>
       <div class="chat">${msgs || '<div class="muted small">No questions yet.</div>'}</div>
@@ -894,6 +899,7 @@ document.addEventListener('click', async (ev) => {
   const a = target.dataset.a;
   try {
     if (a === 'fill') { $('#u').value = target.dataset.u; $('#p').value = target.dataset.p; return; }
+    if (a === 'llm-settings') { await llmSettings(); return; }
     if (a === 'start-tour') { await startTour(); return; }
     if (a === 'go-home') {
       if (!await leaveEditor()) return;
@@ -1086,6 +1092,48 @@ document.addEventListener('keydown', (ev) => {
     ask(q);
   }
 });
+
+/* ------------------------------------------------- bring your own model key */
+
+async function llmSettings() {
+  const current = S.boot.llm || {};
+  const defaults = S.boot.llm_defaults || {};
+  const mine = !!current.user_supplied;
+  const actions = [{id: 'save', label: mine ? 'Replace key' : 'Save & test'}];
+  if (mine) actions.push({id: 'remove', label: 'Remove key', cls: 'danger'});
+  const values = await showModal({
+    title: 'Use your own model key',
+    intro: mine
+      ? `This session is using ${current.model} with key ${current.key_hint}. Paste a new key to replace it.`
+      : 'The assistant and the AI language pass work without a model, using exact quotations from the '
+        + 'chart and deterministic drafting. Add an OpenRouter key to have a model write instead.',
+    notices: [{kind: 'warn', text: 'The key is kept in memory for your sign-in only: never written to the '
+      + 'database or the audit log, and dropped when you sign out or the service restarts. Requests are '
+      + 'billed to you, so set a spending limit on the key first.'}],
+    submitLabel: 'Save & test',
+    actions,
+    fields: [
+      {id: 'api_key', label: 'OpenRouter API key', type: 'password',
+       placeholder: 'sk-or-v1-…', hint: 'Create one at openrouter.ai/keys'},
+      {id: 'model', label: 'Model', value: mine ? current.model : (defaults.model || ''),
+       hint: 'Any model id listed at openrouter.ai/models'},
+      {id: 'base_url', label: 'Endpoint', value: defaults.base_url || '',
+       hint: 'Any OpenAI-compatible endpoint; OpenRouter by default'},
+    ],
+  });
+  if (!values) return;
+  if (values.action === 'remove') {
+    await api('/api/llm/session', {method: 'DELETE'});
+    toast('Key removed. Drafting and the assistant are deterministic again.');
+  } else {
+    if (!values.api_key) { toast('Paste a key, or cancel.', true); return; }
+    const result = await api('/api/llm/session', {method: 'POST', body: {
+      api_key: values.api_key, model: values.model, base_url: values.base_url}});
+    toast(result.message || 'Key accepted.');
+  }
+  S.boot = await api('/api/bootstrap');
+  render();
+}
 
 /* ------------------------------------------------------------ guided tour */
 /* Each step's prepare() establishes the full state that step needs on its own,

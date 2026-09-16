@@ -146,7 +146,7 @@ SYSTEM = (
 
 
 def answer(question: str, evaluations: List[dict], reports: List[dict],
-           patient_names: List[str]) -> dict:
+           patient_names: List[str], llm_cfg=None) -> dict:
     passages = build_passages(evaluations, reports)
     hits = retrieve(question, passages, k=6)
     record = build_record(evaluations)
@@ -180,12 +180,14 @@ def answer(question: str, evaluations: List[dict], reports: List[dict],
         for i, (p, _s) in enumerate(hits)
     )
 
-    if llm.usable():
+    cfg = llm_cfg or llm.CONFIG
+    if llm.usable(cfg):
         payload = context
-        if not llm.CONFIG.is_local:
+        if cfg.scrub_before_send:
             payload = redaction.deidentify(context, patient_names)
             notes.append("Content was de-identified before being sent to the remote model endpoint.")
-        response = llm.complete(SYSTEM, f"Question: {question}\n\nExcerpts:\n{payload}", max_tokens=700)
+        response = llm.complete(SYSTEM, f"Question: {question}\n\nExcerpts:\n{payload}",
+                                max_tokens=700, cfg=cfg)
         if response:
             text = response
             mode = "model"

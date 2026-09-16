@@ -139,6 +139,41 @@ def deidentify(text: str, names: Iterable[str] = (), extra: Iterable[str] = ()) 
     return out
 
 
+MARKER = re.compile(r"\u00ab\d+\u00bb")
+
+
+def pseudonymise(text: str, names: Iterable[str] = ()) -> Tuple[str, Dict[str, str]]:
+    """Replace every identifier with a numbered marker, returning the mapping.
+
+    De-identification is one-way, which suits the assistant but destroys a
+    letter. For a rewrite the identifiers have to come back, so they leave as
+    markers the model is told to reproduce verbatim and are restored on return.
+    """
+    mapping: Dict[str, str] = {}
+    reverse: Dict[str, str] = {}
+
+    def token(match):
+        value = match.group(0)
+        if value not in reverse:
+            marker = "\u00ab%d\u00bb" % (len(mapping) + 1)
+            mapping[marker] = value
+            reverse[value] = marker
+        return reverse[value]
+
+    out = _DATE_WORDS.sub(token, text)
+    for pattern, _repl in _PATTERNS:
+        out = pattern.sub(token, out)
+    for name in sorted({n for n in names if n and len(n) > 2}, key=len, reverse=True):
+        out = re.sub(r"\b%s\b" % re.escape(name), token, out, flags=re.IGNORECASE)
+    return out, mapping
+
+
+def restore(text: str, mapping: Dict[str, str]) -> str:
+    for marker, original in mapping.items():
+        text = text.replace(marker, original)
+    return text
+
+
 def deidentify_record(record: Dict[str, list], names: Iterable[str]) -> Dict[str, list]:
     scrubbed = {}
     for field_id, entries in record.items():

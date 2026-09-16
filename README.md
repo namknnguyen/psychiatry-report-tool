@@ -34,7 +34,7 @@ use content and elevated suicide risk. **No real patient information is included
 should be entered — see "Before real use" below.**
 
 ```bash
-python3 -m tests.test_all      # 83 tests: crypto vectors, access control,
+python3 -m tests.test_all      # 96 tests: crypto vectors, access control,
                                # disclosure rules, generation, assistant, HTTP end to end
 ```
 
@@ -154,6 +154,19 @@ Any OpenAI-compatible endpoint works (`PSYCHREPORT_LLM_PROVIDER=openai`, plus
 `PSYCHREPORT_ALLOW_REMOTE_PHI=1` is set deliberately, and content is Safe Harbor
 de-identified before it is sent. The compliance panel states which of these is in force.
 
+**Or let each person bring their own key.** The **AI model** button in the top bar accepts an
+OpenRouter key (or any OpenAI-compatible endpoint) for *that sign-in only*. The key is tested
+before it is accepted, kept in memory, never written to the database or the audit log, never
+returned by any endpoint, and dropped at sign-out or restart. This is what makes a shared demo
+workable: a single service-wide key would be spent by every visitor, whereas each person's
+requests are billed to their own key. Set a spending limit on the key first.
+
+Both paths scrub identifiers before anything leaves the process. The assistant sends
+de-identified excerpts. The language pass can't simply drop names — a letter needs them back —
+so identifiers travel as numbered markers the model is told to reproduce, and are restored on
+return; if the markers don't come back intact the rewrite is rejected and the clinician's text
+is kept.
+
 ---
 
 ## Before real use
@@ -197,7 +210,7 @@ app/api.py          HTTP API
 app/server.py       routing, static files, security headers
 web/                single-page client, no frameworks, no external requests
 app/config.py       local vs hosted (Render) deployment mode
-tests/test_all.py   83 tests
+tests/test_all.py   96 tests
 render.yaml         Render Blueprint
 DEPLOY.md           step-by-step Render deployment
 ```

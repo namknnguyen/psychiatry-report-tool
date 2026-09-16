@@ -154,6 +154,21 @@ python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 
 ---
 
+## Giving the demo a language model
+
+Two ways, and neither requires redeploying code:
+
+- **Per visitor (recommended for a shared demo).** Anyone signed in can use the **AI model**
+  button in the top bar to paste their own OpenRouter key. It applies to their session only,
+  is never stored, and their usage is billed to them.
+- **Service-wide.** Add these under **Environment** on the service, then let it restart:
+  `PSYCHREPORT_LLM_PROVIDER=openai`, `PSYCHREPORT_LLM_BASE_URL=https://openrouter.ai/api/v1`,
+  `PSYCHREPORT_LLM_MODEL=openai/gpt-4o-mini`, `PSYCHREPORT_LLM_API_KEY=<your key>`, and
+  `PSYCHREPORT_ALLOW_REMOTE_PHI=1` (without that last one, requests are blocked by design).
+
+  Be deliberate about this one: the demo passwords are public, so **anyone with the URL can
+  spend that key**. Set a hard spending limit on it, or prefer the per-visitor option.
+
 ## Updating the deployment
 
 Edit the code in `~/psychreport`, then commit and push. Render redeploys automatically, and the
