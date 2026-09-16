@@ -335,6 +335,10 @@ ASD_EVAL = {
                 _f("referral_source", "Referral source and question", "textarea", req=True),
                 _f("informants", "Informants (caregivers, teachers) and records reviewed", "textarea", req=True),
                 _f("chronological_age", "Chronological age at evaluation", "text"),
+                _f("adjustments_made", "Adjustments made for this assessment", "textarea",
+                   help="An assessment conducted in a distressing environment measures the environment. "
+                        "Record lighting, waiting time, written questions in advance, and continuity of "
+                        "clinician."),
             ],
         },
         {
@@ -357,6 +361,10 @@ ASD_EVAL = {
                 _f("family_history", "Family history of ASD, ID, or psychiatric conditions", "textarea", sens="genetic"),
                 _f("school_history", "Educational history and current supports", "textarea",
                    help="Current IEP/504 status, services, classroom placement."),
+                _f("co_occurring", "Co-occurring conditions", "textarea",
+                   help="ADHD, anxiety, depression, epilepsy, sleep disorder, GI difficulty, feeding "
+                        "and eating, hypermobility, alexithymia, intellectual disability, language "
+                        "disorder, trauma. Note which are diagnosed and which are suspected."),
             ],
         },
         {
@@ -377,6 +385,82 @@ ASD_EVAL = {
                 _f("language_assessment", "Speech-language assessment", "textarea"),
                 _f("adaptive", "Adaptive functioning (Vineland-3 / ABAS-3)", "textarea"),
                 _f("comorbid_screens", "Co-occurring condition screens (ADHD, anxiety, mood)", "textarea"),
+                _f("adult_instruments", "Adult-specific instruments", "textarea",
+                   help="RAADS-R, AQ, CAT-Q (camouflaging), ADOS-2 Module 4. Note where an instrument "
+                        "normed on children is being used with an adult and how that was weighed."),
+            ],
+        },
+        {
+            "id": "profile",
+            "title": "Sensory, Communication & Regulation Profile",
+            "help": "The part of the assessment that makes support possible. Diagnosis states that "
+                    "someone is autistic; this states what they need, and travels into the school "
+                    "letter, the healthcare passport and the adjustments letter.",
+            "fields": [
+                _f("sensory_profile", "Sensory profile", "textarea",
+                   help="By modality - sound, light, touch, taste/smell, movement, interoception. "
+                        "Note hyper- and hyporeactivity, and sensory seeking, separately."),
+                _f("sensory_supports", "Sensory supports that help", "textarea",
+                   help="Ear defenders, sunglasses, quiet space, deep pressure, movement breaks, "
+                        "clothing adaptations. Name what has actually worked."),
+                _f("communication_profile", "Communication profile", "textarea",
+                   help="Spoken language across settings, processing time needed, literal interpretation, "
+                        "situational mutism, echolalia used communicatively, written vs spoken preference."),
+                _f("aac", "AAC and communication tools used", "textarea",
+                   help="Device, app, signing, picture exchange, text-based communication."),
+                _f("communication_preferences", "How to communicate with this person", "textarea",
+                   help="Written for someone meeting them for the first time: what to do, what to avoid, "
+                        "how long to wait for a reply, whether to offer choices in writing."),
+                _f("regulation_profile", "Regulation and stimming", "textarea",
+                   help="Stimming that supports regulation and should not be suppressed; what dysregulates; "
+                        "what helps recovery."),
+                _f("meltdown_shutdown", "Meltdown, shutdown and distress", "textarea",
+                   help="Distinguish meltdown from shutdown from behaviour that is communicative. "
+                        "Describe the build-up, not only the peak."),
+                _f("distress_signs", "Signs of distress or pain others may miss", "textarea",
+                   help="Especially where pain or illness presents as withdrawal, agitation or stillness."),
+                _f("masking", "Masking and camouflaging", "textarea",
+                   help="Effort spent appearing non-autistic, where it is highest, and its cost. "
+                        "CAT-Q score if administered."),
+                _f("burnout", "Autistic burnout", "textarea",
+                   help="Episodes of skill loss, exhaustion and reduced tolerance following sustained "
+                        "demand. Distinguish from depression, and note what aided recovery."),
+                _f("executive_daily", "Executive function and daily living", "textarea",
+                   help="Task initiation, transitions, planning, self-care, money, appointments."),
+                _f("special_interests", "Interests and expertise", "textarea",
+                   help="What the person knows and loves. These are strengths and regulation supports, "
+                        "and are often the way into engagement."),
+                _f("support_needs", "Support needs, in the person's own priority order", "textarea",
+                   help="Where possible, in the autistic person's own words."),
+            ],
+        },
+        {
+            "id": "wellbeing",
+            "title": "Safety & Well-being",
+            "help": "Autistic people face elevated rates of suicide, self-injury and unmet physical "
+                    "health need. Screening is done here explicitly, because these are the things most "
+                    "often missed when every presentation is attributed to autism.",
+            "fields": [
+                _f("elopement", "Elopement / wandering", "textarea", sens="risk",
+                   help="History, triggers, whether the person can seek help, and safety measures agreed."),
+                _f("self_injury", "Self-injurious behaviour", "textarea", sens="risk",
+                   help="Form, function and antecedents. Record separately from suicidal intent - "
+                        "conflating the two leads to the wrong response."),
+                _f("si_ideation", "Suicidal ideation (past month)", "select", sens="risk",
+                   options=["None", "Passive (wish to be dead)", "Active, non-specific",
+                            "Active with method, no intent", "Active with intent", "Active with intent and plan",
+                            "Not assessable at this time"],
+                   help="Ask directly and concretely; indirect or hypothetical phrasing is easily missed."),
+                _f("risk_level", "Overall suicide risk stratification", "select", sens="risk",
+                   options=["Low", "Moderate", "High", "Imminent", "Not applicable at this age"]),
+                _f("risk_rationale", "Clinical rationale for stratification", "textarea", sens="risk"),
+                _f("safety_plan", "Safety plan", "textarea", sens="risk",
+                   help="Adapted where useful: visual, written or app-based rather than verbal recall."),
+                _f("restraint_history", "Restraint, seclusion and aversive intervention history", "textarea",
+                   sens="risk", help="Including in school or hospital settings, and the impact."),
+                _f("overshadowing", "Diagnostic overshadowing check", "textarea",
+                   help="Symptoms previously attributed to autism that warrant their own assessment - "
+                        "pain, GI, sleep, epilepsy, trauma, mood, ADHD."),
             ],
         },
         {
@@ -441,6 +525,7 @@ ASD_EVAL = {
                 _f("recommendations_family", "Family / caregiver guidance", "textarea"),
                 _f("strengths", "Strengths and interests", "textarea"),
                 _f("reassessment", "Re-assessment interval", "text"),
+                _f("followup", "Next appointment", "text"),
                 _f("process_note", "Clinician process note (not released)", "textarea", sens="process_note"),
             ],
         },
@@ -526,7 +611,98 @@ ADHD_EVAL = {
 }
 
 
-FORMS = {f["id"]: f for f in (ADULT_INITIAL, FOLLOW_UP, ASD_EVAL, ADHD_EVAL)}
+ASD_SUPPORT_REVIEW = {
+    "id": "asd_review",
+    "name": "Autism Support Review",
+    "cpt": "99213 / 90833",
+    "description": "Follow-up for an autistic patient. Reviews whether the supports in place are "
+                   "working, rather than whether autistic traits have reduced.",
+    "sections": [
+        {
+            "id": "encounter",
+            "title": "Review Information",
+            "fields": [
+                _f("encounter_date", "Date of review", "date", req=True),
+                _f("encounter_setting", "Setting", "select",
+                   options=["Outpatient clinic", "Telehealth", "School consultation", "Home visit"]),
+                _f("informants", "Who attended and who contributed", "textarea",
+                   help="Include the autistic person's own account first where they are able to give one, "
+                        "and note how it was gathered if speech is not their preferred means."),
+                _f("adjustments_made", "Adjustments made for this appointment", "textarea",
+                   help="Lighting, waiting time, written questions in advance, the same clinician."),
+            ],
+        },
+        {
+            "id": "interval",
+            "title": "Since the Last Review",
+            "fields": [
+                _f("interval_history", "What has changed", "textarea", req=True),
+                _f("supports_in_place", "Supports in place and whether they are working", "textarea", req=True,
+                   help="School or workplace adjustments, therapies, AAC, sensory supports. "
+                        "Name what to keep, what to drop, and what was never actually implemented."),
+                _f("demands_environment", "Demands and environment", "textarea",
+                   help="Changes in setting, timetable, staff, housing, or transport."),
+                _f("burnout", "Autistic burnout", "textarea"),
+                _f("masking", "Masking and camouflaging", "textarea"),
+                _f("co_occurring", "Co-occurring conditions", "textarea"),
+                _f("medication_current", "Current medication, and what it is targeting", "textarea",
+                   help="Medication treats co-occurring conditions; it does not treat autism. "
+                        "State the target symptom and how response is being judged."),
+                _f("side_effects", "Adverse effects", "textarea"),
+            ],
+        },
+        {
+            "id": "profile",
+            "title": "Profile Updates",
+            "fields": [
+                _f("sensory_profile", "Sensory profile", "textarea"),
+                _f("sensory_supports", "Sensory supports that help", "textarea"),
+                _f("communication_profile", "Communication profile", "textarea"),
+                _f("communication_preferences", "How to communicate with this person", "textarea"),
+                _f("regulation_profile", "Regulation and stimming", "textarea"),
+                _f("meltdown_shutdown", "Meltdown, shutdown and distress", "textarea"),
+                _f("executive_daily", "Executive function and daily living", "textarea"),
+                _f("special_interests", "Interests and expertise", "textarea"),
+                _f("support_needs", "Support needs, in the person's own priority order", "textarea"),
+                _f("strengths", "Strengths", "textarea"),
+            ],
+        },
+        {
+            "id": "wellbeing",
+            "title": "Safety & Well-being",
+            "fields": [
+                _f("elopement", "Elopement / wandering", "textarea", sens="risk"),
+                _f("self_injury", "Self-injurious behaviour", "textarea", sens="risk"),
+                _f("si_ideation", "Suicidal ideation (past month)", "select", sens="risk",
+                   options=["None", "Passive (wish to be dead)", "Active, non-specific",
+                            "Active with method, no intent", "Active with intent", "Active with intent and plan",
+                            "Not assessable at this time"]),
+                _f("risk_level", "Overall suicide risk stratification", "select", sens="risk",
+                   options=["Low", "Moderate", "High", "Imminent", "Not applicable at this age"]),
+                _f("risk_rationale", "Clinical rationale for stratification", "textarea", sens="risk"),
+                _f("safety_plan", "Safety plan", "textarea", sens="risk"),
+                _f("overshadowing", "Diagnostic overshadowing check", "textarea"),
+            ],
+        },
+        {
+            "id": "plan",
+            "title": "Plan",
+            "fields": [
+                _f("assessment", "Assessment", "textarea", req=True),
+                _f("dsm_diagnoses", "Active diagnoses with ICD-10-CM codes", "textarea"),
+                _f("treatment_plan", "Support plan changes", "textarea", req=True,
+                   help="What changes in the environment and the supports, not what changes in the person."),
+                _f("recommendations_school", "Education or workplace adjustments", "textarea"),
+                _f("recommendations_family", "Family / caregiver guidance", "textarea"),
+                _f("followup", "Next review", "text"),
+                _f("process_note", "Clinician process note (not released)", "textarea", sens="process_note"),
+            ],
+        },
+    ],
+}
+
+
+FORMS = {f["id"]: f for f in (ASD_EVAL, ASD_SUPPORT_REVIEW, ADULT_INITIAL, FOLLOW_UP, ADHD_EVAL)}
 
 
 def field_index(form_id: str) -> dict:

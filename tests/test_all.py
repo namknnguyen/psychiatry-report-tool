@@ -110,10 +110,12 @@ class TestStorage(unittest.TestCase):
                 if os.path.exists(store.path + suffix):
                     with open(store.path + suffix, "rb") as handle:
                         raw += handle.read()
-            for needle in (b"Ellison", b"Whitfield", b"suicidal", b"lithium", b"MRN-00101x"):
+            for needle in (b"Ellison", b"Whitfield", b"Duarte", b"suicidal", b"lithium",
+                           b"autistic burnout", b"MRN-00101x"):
                 self.assertNotIn(needle, raw, "plaintext %r found in the database file" % needle)
             # The row-level structure is still queryable.
-            self.assertEqual(store.one("SELECT COUNT(*) c FROM patients")["c"], 4)
+            from app.seed import PATIENTS
+            self.assertEqual(store.one("SELECT COUNT(*) c FROM patients")["c"], len(PATIENTS))
 
 
 class TestAudit(unittest.TestCase):
@@ -1326,6 +1328,151 @@ class TestSessionModelKey(unittest.TestCase):
         # The stub's reply invents nothing, but it is still fact-guarded, and the
         # draft records that AI language was involved either way.
         self.assertIn("ai_assisted", report["content"])
+
+
+
+# --------------------------------------------------------------------------
+# Autism-focused behaviour
+# --------------------------------------------------------------------------
+
+
+class TestAutismSupport(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.store = fresh_store(cls.tmp.name)
+        seed(cls.store)
+        cls.clinician = {"id": 1, "display_name": "Dr. Amara Chen", "credentials": "MD",
+                         "npi": "1457893021", "role": "clinician"}
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def _patient(self, mrn):
+        row = self.store.one("SELECT * FROM patients WHERE mrn=?", (mrn,))
+        demographics = self.store.payload("patients", row)
+        evaluations = []
+        for ev in self.store.query("SELECT * FROM evaluations WHERE patient_id=?", (row["id"],)):
+            payload = self.store.payload("evaluations", ev)
+            evaluations.append({"id": ev["id"], "form_id": ev["form_id"],
+                                "encounter_date": ev["encounter_date"], "answers": payload["answers"]})
+        return row, demographics, evaluations
+
+    def _render(self, mrn, template_id, authorization=None):
+        row, demographics, evaluations = self._patient(mrn)
+        content = generator.generate(demographics, row["mrn"], evaluations, template_id,
+                                     self.clinician, api.PRACTICE, authorization=authorization)
+        return content, generator.to_text(content)
+
+    def test_autism_report_leads_with_support_not_severity(self):
+        content, text = self._render("MRN-00102", "autism_report")
+        titles = [s["title"] for s in content["sections"]]
+        self.assertIn("Strengths and interests", titles)
+        self.assertIn("Level of support needed", titles)
+        self.assertIn("Sensory profile", titles)
+        self.assertIn("Communication", titles)
+        self.assertIn("F84.0", text)
+        self.assertIn("subway", text.lower())          # the interest is in the report, not just the deficit
+        self.assertIn("requiring support", text.lower())
+
+    def test_healthcare_passport_puts_communication_first(self):
+        content, text = self._render("MRN-00105", "healthcare_passport")
+        self.assertEqual(content["sections"][1]["title"], "How to communicate with me")
+        self.assertIn("writing", text.lower())
+        self.assertIn("attributed to autism", text.lower())
+        self.assertIn("Please do not assume it is just autism",
+                      [sec["title"] for sec in content["sections"]])
+        # identifiers are limited: no record number on a page that travels
+        self.assertNotIn("MRN-00105", text)
+
+    def test_adjustments_letter_carries_no_risk_content(self):
+        authorization = {"id": 1, "scopes": [], "recipient_name": "Cadence Analytics - People Team"}
+        content, text = self._render("MRN-00105", "reasonable_adjustments", authorization)
+        lowered = text.lower()
+        for needle in ("suicid", "self-injur", "skin picking", "safety plan"):
+            self.assertNotIn(needle, lowered)
+        withheld = {w["field_id"] for w in content["withheld"]}
+        self.assertIn("si_ideation", withheld)
+        self.assertIn("self_injury", withheld)
+        self.assertIn("quiet", lowered)                 # the adjustments themselves are there
+
+    def test_sensitive_language_in_free_text_is_flagged_for_review(self):
+        """Field tags cannot see inside prose, so a mention of self-injury inside
+        a general-sensitivity field has to be surfaced rather than shipped."""
+        sections = [{"title": "Predictability and change", "kind": "bullets",
+                     "body": ["Weaving most evenings. Skin picking has stopped."], "provenance": []}]
+        hits = generator.scan_for_sensitive_language(sections, allowed={"general"})
+        self.assertTrue(hits)
+        self.assertEqual(hits[0]["term"], "skin picking")
+        # ...and nothing is flagged for a recipient whose template does carry risk
+        self.assertEqual(generator.scan_for_sensitive_language(sections, allowed={"general", "risk"}), [])
+
+    def test_adjustments_letter_warns_when_prose_carries_more_than_its_tag(self):
+        row, demographics, evaluations = self._patient("MRN-00105")
+        leaky = [dict(e) for e in evaluations]
+        leaky[0] = dict(leaky[0], answers=dict(leaky[0]["answers"],
+                        executive_daily="Task initiation is hard, worse after an overdose last year."))
+        content = generator.generate(demographics, row["mrn"], leaky, "reasonable_adjustments",
+                                     self.clinician, api.PRACTICE)
+        self.assertTrue(any("free text" in w for w in content["warnings"]), content["warnings"])
+
+    def test_language_preference_is_per_patient(self):
+        _content, elena = self._render("MRN-00105", "autism_report")      # identity-first
+        _content, danny = self._render("MRN-00102", "autism_report")      # person-first
+        self.assertIn("autistic", elena.lower())
+        self.assertNotIn("person with autism", elena.lower())
+        self.assertNotIn("child with autism", elena.lower())
+        self.assertNotIn("autistic child", danny.lower())
+        self.assertNotIn("is autistic", danny.lower())
+
+    def test_identity_language_rules_are_reversible(self):
+        identity = generator._identity_language("A child with autism has autism.", "identity-first")
+        self.assertEqual(identity, "An autistic child is autistic." .replace("An ", "A "))
+        person = generator._identity_language("The autistic adult is autistic.", "person-first")
+        self.assertEqual(person, "The adult with autism has autism.")
+
+    def test_generated_sentences_follow_the_language_preference_too(self):
+        _content, danny = self._render("MRN-00102", "healthcare_passport")   # person-first
+        _content, elena = self._render("MRN-00105", "healthcare_passport")   # identity-first
+        self.assertIn("has autism", danny)
+        self.assertNotIn("Danny is autistic", danny)
+        self.assertIn("Elena is autistic", elena)
+
+    def test_self_injury_is_recorded_separately_from_suicidality(self):
+        _row, _dem, evaluations = self._patient("MRN-00105")
+        record = generator.build_record(evaluations)
+        self.assertIn("self_injury", record)
+        self.assertIn("si_ideation", record)
+        self.assertIn("regulation", record["self_injury"][0]["value"].lower())
+        # and the risk engine still works on the autism forms
+        risk = redaction.assess_risk(record)
+        self.assertEqual(risk["level"], "Low")
+
+    def test_neuro_profile_detects_autism_and_ignores_other_charts(self):
+        for mrn, expected in (("MRN-00102", True), ("MRN-00105", True), ("MRN-00101", False)):
+            _row, _dem, evaluations = self._patient(mrn)
+            profile = api._neuro_profile(generator.build_record(evaluations))
+            self.assertEqual(profile["autistic"], expected, mrn)
+        _row, _dem, evaluations = self._patient("MRN-00105")
+        profile = api._neuro_profile(generator.build_record(evaluations))
+        self.assertTrue(profile["has_passport_content"])
+        self.assertIn("Level 1", profile["levels"]["social"])
+
+    def test_general_psychiatry_still_works(self):
+        """The autism focus must not cost the general case anything."""
+        content, text = self._render("MRN-00104", "insurance_lmn")
+        self.assertIn("F31.4", text)
+        self.assertIn("medically necessary", text)
+        risk = content["risk"]
+        self.assertEqual(risk["level"], "High")
+
+    def test_autism_forms_carry_the_support_profile(self):
+        for form_id in ("asd_eval", "asd_review"):
+            fields = {f["id"] for s in FORMS[form_id]["sections"] for f in s["fields"]}
+            for expected in ("sensory_profile", "communication_preferences", "meltdown_shutdown",
+                             "masking", "burnout", "support_needs", "self_injury", "overshadowing"):
+                self.assertIn(expected, fields, f"{form_id} is missing {expected}")
 
 
 if __name__ == "__main__":

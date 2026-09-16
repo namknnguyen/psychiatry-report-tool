@@ -284,8 +284,128 @@ DISABILITY_SSA = {
 }
 
 
+AUTISM_REPORT = {
+    "id": "autism_report",
+    "name": "Autism Diagnostic Report",
+    "recipient_type": "Autistic person and family",
+    "purpose": "Diagnostic feedback and support planning",
+    "reading_level": PLAIN,
+    "identifiers": LIMITED,
+    "requires_authorization": False,
+    "allowed_sens": BASE_SENS + ("risk", "genetic"),
+    "audience_note": "The report the family actually keeps. Written to be read by the autistic person "
+                     "and the people around them, and organised so the support profile carries as much "
+                     "weight as the diagnosis. Released under the right of access; sharing it onward is "
+                     "the family's decision.",
+    "sections": [
+        _s("Why this assessment happened", "narrative", ["referral_source", "chief_complaint"], required=True),
+        _s("How the assessment was done", "kv", ["encounter_date", "informants", "adjustments_made"]),
+        _s("What was administered", "bullets",
+           ["ados_module", "ados_scores", "adir", "rating_scales", "adult_instruments", "cognitive",
+            "language_assessment", "adaptive", "comorbid_screens"]),
+        _s("Development over time", "narrative",
+           ["milestones", "language_dev", "social_dev", "rrb_history", "sensory_history"]),
+        _s("Social communication: what was observed", "narrative", ["a1", "a2", "a3"]),
+        _s("Repetitive behaviour, interests and sensory responses", "narrative", ["b1", "b2", "b3", "b4"]),
+        _s("Present from early on, and affecting daily life", "narrative",
+           ["c_onset", "d_impairment", "e_differential"]),
+        _s("What else was considered", "narrative", ["differential"]),
+        _s("The conclusion", "codes", ["dsm_diagnoses"], required=True,
+           intro="A diagnosis describes a pattern and unlocks support. It does not describe a person's "
+                 "worth, potential, or personality."),
+        _s("Level of support needed", "custom", builder="support_levels"),
+        _s("Strengths and interests", "narrative", ["strengths", "special_interests"], required=True),
+        _s("Sensory profile", "narrative", ["sensory_profile", "sensory_supports"]),
+        _s("Communication", "narrative", ["communication_profile", "aac", "communication_preferences"]),
+        _s("Regulation, meltdown and shutdown", "narrative",
+           ["regulation_profile", "meltdown_shutdown", "masking", "burnout"]),
+        _s("Other conditions that travel with this", "narrative", ["co_occurring", "overshadowing"]),
+        _s("Support needs", "bullets", ["support_needs", "executive_daily"]),
+        _s("What helps", "bullets",
+           ["recommendations_clinical", "recommendations_family", "recommendations_school"], required=True),
+        _s("Safety", "bullets", ["elopement", "self_injury", "safety_plan"]),
+        _s("Next steps", "kv", ["reassessment", "followup"]),
+        _s("Questions", "custom", builder="contact_block"),
+    ],
+    "footer": "This report belongs to the person it describes. If anything here does not match how you "
+              "see yourself or your child, say so - the record should be corrected.",
+}
+
+HEALTHCARE_PASSPORT = {
+    "id": "healthcare_passport",
+    "name": "Healthcare Communication Passport",
+    "recipient_type": "Hospital or other healthcare team",
+    "purpose": "Treatment; reasonable adjustments in a healthcare setting",
+    "reading_level": PLAIN,
+    "identifiers": LIMITED,
+    "requires_authorization": False,
+    "allowed_sens": BASE_SENS + ("risk",),
+    "audience_note": "One page for an emergency department, ward or clinic that has never met this "
+                     "person. Communication and sensory needs come first because that is what is "
+                     "needed in the first five minutes; the diagnosis matters less than knowing how "
+                     "to approach someone.",
+    "sections": [
+        _s("About this passport", "custom", builder="passport_intro", required=True),
+        _s("How to communicate with me", "narrative",
+           ["communication_preferences", "communication_profile", "aac"], required=True),
+        _s("My sensory needs", "narrative", ["sensory_profile", "sensory_supports"]),
+        _s("If I seem distressed", "narrative",
+           ["distress_signs", "meltdown_shutdown", "regulation_profile"]),
+        _s("What helps me", "bullets", ["sensory_supports", "support_needs", "special_interests"]),
+        _s("Please do not assume it is just autism", "narrative", ["overshadowing"],
+           intro="Pain and illness in autistic people are routinely missed because a change in "
+                 "behaviour gets attributed to autism. Investigate a new symptom as you would for "
+                 "anyone else."),
+        _s("My health", "narrative",
+           ["co_occurring", "medical_history", "medical_conditions", "current_medications",
+            "medication_current", "allergies"]),
+        _s("My diagnoses", "codes", ["dsm_diagnoses"]),
+        _s("Safety", "bullets", ["elopement", "self_injury", "safety_plan"]),
+        _s("Who to contact", "custom", builder="contact_block"),
+    ],
+    "footer": "Prepared by the person's psychiatric team to support reasonable adjustments. "
+              "Please keep it with the notes and read it before approaching.",
+}
+
+REASONABLE_ADJUSTMENTS = {
+    "id": "reasonable_adjustments",
+    "name": "Reasonable Adjustments Letter",
+    "recipient_type": "Education or employment support service",
+    "purpose": "Support a request for reasonable adjustments",
+    "reading_level": ADMINISTRATIVE,
+    "identifiers": LIMITED,
+    "requires_authorization": True,
+    "allowed_sens": BASE_SENS,
+    "audience_note": "Adjustments are changes to the environment and the demands, not to the person. "
+                     "Written so each recommendation names the barrier it removes. Risk, trauma and "
+                     "substance content are withheld; the diagnosis is included only because statutory "
+                     "support usually requires it.",
+    "sections": [
+        _s("Purpose of this letter", "custom", builder="adjustments_intro", required=True),
+        _s("Basis for this opinion", "custom", builder="treatment_relationship"),
+        _s("Diagnosis", "codes", ["dsm_diagnoses"]),
+        _s("How this presents day to day", "bullets",
+           ["executive_daily", "func_work_school", "func_cognitive", "d_impairment", "impairment",
+            "func_impact_summary"], required=True),
+        _s("Sensory environment", "bullets", ["sensory_profile", "sensory_supports"]),
+        _s("Communication", "bullets", ["communication_preferences", "communication_profile", "aac"]),
+        _s("Predictability and change", "bullets", ["meltdown_shutdown"],
+           intro="Shutdown is not refusal, and a change of plan costs more than it appears to:"),
+        _s("Adjustments recommended", "bullets",
+           ["recommendations_school", "support_needs", "treatment_plan"], required=True,
+           intro="Each of these removes a specific barrier rather than lowering a standard:"),
+        _s("Strengths to build on", "narrative", ["strengths", "special_interests"]),
+        _s("Review", "kv", ["followup", "reassessment"]),
+        _s("Contact", "custom", builder="contact_block"),
+    ],
+    "footer": "This letter describes functional needs and the adjustments that address them. Under the "
+              "ADA, medical information must be kept confidential and separate from the personnel file.",
+}
+
+
 TEMPLATES = {t["id"]: t for t in (
-    FAMILY_CAREGIVER, PATIENT_AVS, SCHOOL_IEP, INSURANCE_LMN,
+    AUTISM_REPORT, HEALTHCARE_PASSPORT, REASONABLE_ADJUSTMENTS, SCHOOL_IEP,
+    FAMILY_CAREGIVER, PATIENT_AVS, INSURANCE_LMN,
     REFERRING_CLINICIAN, THERAPIST_CARE_TEAM, EMPLOYER_ACCOMMODATION, DISABILITY_SSA,
 )}
 
@@ -294,6 +414,24 @@ TEMPLATES = {t["id"]: t for t in (
 # replaced with an everyday phrase that keeps the clinical word in brackets so
 # the reader can look it up and the meaning is not lost.
 GLOSSARY = {
+    # Autism vocabulary, explained without being explained away.
+    "masking": "hiding autistic traits to fit in, which is exhausting (masking)",
+    "camouflaging": "hiding autistic traits to fit in (camouflaging)",
+    "autistic burnout": "exhaustion and loss of skills after too much demand (autistic burnout)",
+    "meltdown": "an overwhelmed reaction that is not a tantrum and is not chosen (meltdown)",
+    "shutdown": "withdrawing and going quiet when overwhelmed (shutdown)",
+    "stimming": "repeated movement or sound that helps with regulation (stimming)",
+    "dysregulation": "finding it hard to settle emotions or arousal",
+    "interoception": "the sense of what is happening inside the body, like hunger or pain (interoception)",
+    "proprioception": "the sense of where the body is in space (proprioception)",
+    "AAC": "communication aids such as a speech app, signing or picture cards (AAC)",
+    "elopement": "leaving a safe place suddenly, often to escape something overwhelming",
+    "special interest": "a deep, focused interest",
+    "neurodivergent": "having a brain that works differently from what is typical (neurodivergent)",
+    "hyperreactivity": "reacting strongly to sights, sounds or touch",
+    "hyporeactivity": "reacting less than expected to sights, sounds or touch",
+    "diagnostic overshadowing": "blaming every new symptom on an existing diagnosis "
+                                "(diagnostic overshadowing)",
     "anhedonia": "loss of interest or enjoyment (anhedonia)",
     "psychomotor retardation": "moving and thinking more slowly than usual (psychomotor retardation)",
     "psychomotor agitation": "restlessness that is hard to control (psychomotor agitation)",

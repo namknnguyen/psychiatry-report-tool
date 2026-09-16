@@ -131,11 +131,38 @@ def _plain_language(text: str, patient_word: str) -> str:
     return out
 
 
-def _humanise(text: str, template: dict, patient_word: str) -> str:
+_IDENTITY_FIRST = [
+    (re.compile(r"\b(person|people|child|children|individual|individuals|adult|adults|student|students|"
+                r"patient|patients|boy|girl|man|woman)\s+with\s+(?:autism|ASD|autism spectrum disorder)\b",
+                re.IGNORECASE), lambda m: "autistic " + m.group(1)),
+    (re.compile(r"\bhas\s+(?:autism|ASD)\b", re.IGNORECASE), lambda m: "is autistic"),
+    (re.compile(r"\bhave\s+(?:autism|ASD)\b", re.IGNORECASE), lambda m: "are autistic"),
+]
+
+_PERSON_FIRST = [
+    (re.compile(r"\bautistic\s+(person|people|child|children|individual|individuals|adult|adults|"
+                r"student|students|patient|patients)\b", re.IGNORECASE),
+     lambda m: m.group(1) + " with autism"),
+    (re.compile(r"\bis\s+autistic\b", re.IGNORECASE), lambda m: "has autism"),
+    (re.compile(r"\bare\s+autistic\b", re.IGNORECASE), lambda m: "have autism"),
+]
+
+
+def _identity_language(text: str, preference: str) -> str:
+    """Most autistic adults prefer identity-first language ("autistic person"),
+    while some families prefer person-first. It is recorded per patient and
+    applied to what is written about them, rather than being the house style."""
+    rules = _PERSON_FIRST if preference == "person-first" else _IDENTITY_FIRST
+    for pattern, repl in rules:
+        text = pattern.sub(repl, text)
+    return text
+
+
+def _humanise(text: str, template: dict, patient_word: str, language: str = "identity-first") -> str:
     text = text.strip()
     if template.get("reading_level") == PLAIN:
         text = _plain_language(text, patient_word)
-    return text
+    return _identity_language(text, language)
 
 
 def _bullets_from(text: str) -> List[str]:
@@ -238,6 +265,7 @@ class _Ctx:
         self.mrn = mrn
         self.patient_word = patient_word
         self.allowed = set(allowed)
+        self.language = (patient.get("language_preference") or "identity-first")
         self.dropped_diagnoses = []
 
     def diagnoses(self):
@@ -292,7 +320,7 @@ def _b_safety_family(ctx: _Ctx):
     if means:
         lines.append("Reducing access to anything that could be used for self-harm is one of the most "
                      "effective things a household can do. What we discussed: " + means)
-    return {"kind": "narrative", "body": [_humanise(l, ctx.template, ctx.patient_word) for l in lines],
+    return {"kind": "narrative", "body": [_humanise(l, ctx.template, ctx.patient_word, ctx.language) for l in lines],
             "provenance": ctx.prov("risk_level", "protective", "safety_plan", "si_means")}
 
 
@@ -485,6 +513,45 @@ def _b_coordination(ctx: _Ctx):
     return {"kind": "narrative", "body": body, "provenance": []}
 
 
+def _b_support_levels(ctx: _Ctx):
+    rows = []
+    for field_id, label in (("severity_social", "Social communication"),
+                            ("severity_rrb", "Repetitive behaviour and sensory")):
+        value = ctx.latest(field_id)
+        if value and value != "Not applicable":
+            rows.append([label, value])
+    if not rows:
+        return None
+    return {"kind": "table", "columns": ["Area", "Level of support needed"], "body": rows,
+            "intro": "DSM-5-TR describes support needs in two areas separately, because they often "
+                     "differ. A level describes how much support is needed now, in this environment - "
+                     "it is not a measure of ability, and it can change.",
+            "provenance": ctx.prov("severity_social", "severity_rrb")}
+
+
+def _b_passport_intro(ctx: _Ctx):
+    name = ctx.patient.get("preferred_name") or ctx.patient.get("first_name") or "This person"
+    # Even the generated sentences follow the patient's recorded preference.
+    described = "%s has autism" % name if ctx.language == "person-first" else "%s is autistic" % name
+    body = [
+        "%s. This page describes how to communicate with %s and what helps, so that you "
+        "do not have to work it out during an appointment." % (described, name),
+        "Small adjustments make the difference: giving extra time to answer, saying exactly what will "
+        "happen next, reducing noise and light where you can, and asking before touching.",
+    ]
+    return {"kind": "narrative", "body": body, "provenance": []}
+
+
+def _b_adjustments_intro(ctx: _Ctx):
+    body = [
+        "This letter is provided at my patient's request to support a request for reasonable "
+        "adjustments. It describes functional needs and the adjustments that address them.",
+        "The adjustments below change the environment and the demands rather than the person. Most "
+        "cost nothing, and they are what allow the strengths described at the end to be used.",
+    ]
+    return {"kind": "narrative", "body": body, "provenance": []}
+
+
 BUILDERS = {
     "crisis_resources": _b_crisis,
     "safety_family": _b_safety_family,
@@ -499,6 +566,9 @@ BUILDERS = {
     "necessity_statement": _b_necessity,
     "attestation": _b_attestation,
     "coordination_block": _b_coordination,
+    "support_levels": _b_support_levels,
+    "passport_intro": _b_passport_intro,
+    "adjustments_intro": _b_adjustments_intro,
 }
 
 
@@ -535,7 +605,7 @@ def _render_section(spec: dict, ctx: _Ctx, kept: Dict[str, list]) -> Optional[di
         multi_date = len({p["date"] for p in provenance if p["date"]}) > 1
         for field_id, entries in present:
             for entry in entries:
-                text = _humanise(entry["value"], ctx.template, ctx.patient_word)
+                text = _humanise(entry["value"], ctx.template, ctx.patient_word, ctx.language)
                 if multi_date and entry["date"] and len(present) + len(entries) > 2:
                     text = f"[{entry['date']}] {text}"
                 body.append(text)
@@ -551,7 +621,7 @@ def _render_section(spec: dict, ctx: _Ctx, kept: Dict[str, list]) -> Optional[di
             label_it = field_spec.get("type") in ("select", "number", "text", "date")
             for entry in entries:
                 for bullet in _bullets_from(entry["value"]):
-                    text = _humanise(bullet, ctx.template, ctx.patient_word)
+                    text = _humanise(bullet, ctx.template, ctx.patient_word, ctx.language)
                     if label_it and len(text) < 80:
                         text = "%s: %s" % (label_of(field_id), text)
                     key = text.lower()
@@ -566,7 +636,7 @@ def _render_section(spec: dict, ctx: _Ctx, kept: Dict[str, list]) -> Optional[di
         body = {}
         for field_id, entries in present:
             value = entries[-1]["value"]
-            body[label_of(field_id)] = _humanise(value, ctx.template, ctx.patient_word)
+            body[label_of(field_id)] = _humanise(value, ctx.template, ctx.patient_word, ctx.language)
         return {"title": spec["title"], "kind": "kv", "body": body,
                 "provenance": provenance, "intro": spec.get("intro", "")}
 
@@ -635,6 +705,13 @@ def generate(patient: dict, mrn: str, evaluations: List[dict], template_id: str,
         })
 
     warnings = []
+    for hit in scan_for_sensitive_language(sections, allowed):
+        warnings.append(
+            "Possible %s content in free text: \"%s\" appears in the section '%s', which this "
+            "recipient's template does not otherwise carry. Field tagging cannot see inside prose - "
+            "read that section before releasing."
+            % (redaction.SENSITIVITY_LABELS.get(hit["sensitivity"], hit["sensitivity"]).lower(),
+               hit["term"], hit["section"]))
     if missing:
         warnings.append("Required section(s) could not be filled from the record: "
                         + ", ".join(missing) + ". Complete the evaluation or edit the draft before signing.")
@@ -676,6 +753,31 @@ def generate(patient: dict, mrn: str, evaluations: List[dict], template_id: str,
 # --------------------------------------------------------------------------
 # Plain-text rendering (used for export, hashing and the AI assistant)
 # --------------------------------------------------------------------------
+
+SENSITIVE_TERMS = {
+    "risk": ("suicid", "self-harm", "self harm", "self-injur", "skin picking", "overdose",
+             "cutting himself", "cutting herself"),
+    "sud": ("alcohol", "cannabis", "cocaine", "opioid", "heroin", "substance use disorder"),
+}
+
+
+def scan_for_sensitive_language(sections: List[dict], allowed) -> List[dict]:
+    """Sensitivity is recorded per field, which cannot see inside prose. A
+    clinician writing about regulation may mention self-injury in passing, and
+    that sentence then travels with the field it sits in. This finds those and
+    asks for a human decision rather than silently deleting clinical text."""
+    hits, seen = [], set()
+    for section in sections:
+        body = to_text({"sections": [section]}).lower()
+        for sens, terms in SENSITIVE_TERMS.items():
+            if sens in allowed:
+                continue
+            for term in terms:
+                if term in body and (section["title"], term) not in seen:
+                    seen.add((section["title"], term))
+                    hits.append({"section": section["title"], "sensitivity": sens, "term": term})
+    return hits[:6]
+
 
 def to_text(report: dict, include_header: bool = False) -> str:
     lines: List[str] = []

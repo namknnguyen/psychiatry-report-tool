@@ -137,6 +137,36 @@ def _report_dict(ctx: Context, row, include_content: bool = True) -> dict:
     return item
 
 
+AUTISM_CODE = re.compile(r"\bF84", re.IGNORECASE)
+
+PROFILE_FIELDS = ("sensory_profile", "sensory_supports", "communication_profile",
+                  "communication_preferences", "aac", "regulation_profile", "meltdown_shutdown",
+                  "distress_signs", "masking", "burnout", "executive_daily", "special_interests",
+                  "support_needs", "co_occurring", "overshadowing")
+
+
+def _neuro_profile(record: dict) -> dict:
+    """The support profile, which for an autistic patient is the part of the
+    chart that actually drives what anyone does differently tomorrow."""
+
+    def latest(field_id):
+        entries = record.get(field_id) or []
+        return entries[-1]["value"] if entries else ""
+
+    diagnoses = latest("dsm_diagnoses")
+    autistic = bool(AUTISM_CODE.search(diagnoses)) or bool(latest("severity_social")) \
+        or bool(latest("a_met"))
+    profile = {field: latest(field) for field in PROFILE_FIELDS if latest(field)}
+    return {
+        "autistic": autistic,
+        "levels": {"social": latest("severity_social"), "rrb": latest("severity_rrb")},
+        "profile": profile,
+        "strengths": latest("strengths"),
+        "has_passport_content": bool(profile.get("communication_preferences")
+                                     or profile.get("sensory_profile")),
+    }
+
+
 def _patient_summary(ctx: Context, row, clinical: bool) -> dict:
     payload = ctx.store.payload("patients", row)
     summary = {
@@ -161,6 +191,9 @@ def _patient_summary(ctx: Context, row, clinical: bool) -> dict:
         risk = redaction.assess_risk(record)
         summary["risk_level"] = risk["level"]
         summary["risk_gaps"] = risk["gaps"]
+        neuro = _neuro_profile(record)
+        summary["autistic"] = neuro["autistic"]
+        summary["support_levels"] = neuro["levels"]
         primary = generator.parse_diagnoses(
             (record.get("dsm_diagnoses") or [{}])[-1].get("value", "") if record.get("dsm_diagnoses") else "")
         summary["diagnoses"] = primary[:3]
@@ -462,6 +495,7 @@ def get_patient(ctx: Context, req: Request):
                          for r in ctx.store.query(
                              "SELECT * FROM reports WHERE patient_id=? ORDER BY id DESC", (patient_id,))]
     result["risk"] = redaction.assess_risk(record)
+    result["neuro"] = _neuro_profile(record)
     result["completeness"] = assistant.completeness_check(evaluations)
     result["disclosures"] = _disclosure_rows(ctx, patient_id)
     return result

@@ -286,6 +286,7 @@ PATIENTS = [
             "insurance": {"carrier": "Statewide Children's Plan", "member_id": "SC-7719044",
                           "group_number": "GRP-3320"},
             "school": "Brookline Elementary, 2nd grade",
+            "language_preference": "person-first",
         },
         "evaluations": [
             {"form_id": "asd_eval", "encounter_date": _d(31), "sign": True, "answers": {
@@ -493,6 +494,86 @@ PATIENTS = [
                              "for systems and maps, honesty, persistence with problems that interest "
                              "him, and genuine warmth with familiar adults.",
                 "reassessment": "12 months, or sooner if the school team requests input",
+                "adjustments_made": "Appointments booked first of the day to avoid a waiting room; "
+                                    "overhead lights off and a lamp used instead; same room and same "
+                                    "clinician for both sessions; a photograph of the room sent to the "
+                                    "family beforehand.",
+                "co_occurring": "Diagnosed: none besides ASD. Suspected and monitored: ADHD (Conners-4 "
+                                "elevated for inattention on both parent and teacher forms) and anxiety "
+                                "(SCARED elevated for separation and school avoidance). Chronic "
+                                "sleep-onset difficulty and functional constipation are documented and "
+                                "managed by paediatrics.",
+                "sensory_profile": "Sound: hyperreactive - hand dryers, fire alarms and the cafeteria "
+                                   "are the reliable triggers. Touch: hyperreactive to seams and tags, "
+                                   "which are removed; seeks deep pressure and asks to be squeezed "
+                                   "between cushions. Taste and smell: repertoire of about twelve foods, "
+                                   "strongly texture-driven. Interoception and pain: reduced reactivity - "
+                                   "he did not report a cut that needed stitches. Movement: seeks "
+                                   "spinning and swinging when dysregulated.",
+                "sensory_supports": "Ear defenders available without having to ask. A known quiet space "
+                                    "he may leave for. Seating away from the door and the hand dryers. "
+                                    "Deep pressure before transitions. Soft waistbands, no tags.",
+                "communication_profile": "Fluent speech and a large vocabulary, which leads adults to "
+                                         "overestimate how much he has taken in. Needs about ten seconds "
+                                         "of processing time; repeating the question early resets that "
+                                         "clock. Interprets language literally. Delayed echolalia of "
+                                         "film dialogue is communicative, and often signals that he is "
+                                         "at capacity.",
+                "aac": "None required. Written instructions and a visual schedule act as his "
+                       "communication supports.",
+                "communication_preferences": "Say his name first, then wait. One instruction at a time, "
+                                             "in the order it will happen. Count silently to ten before "
+                                             "repeating. Ask him to say it back rather than asking "
+                                             "whether he understood - he will say yes either way. Use "
+                                             "literal words: 'in five minutes we stop', not 'in a little "
+                                             "while'. Do not require eye contact; he listens better "
+                                             "without it.",
+                "regulation_profile": "Hand-flapping when excited and rocking when concentrating. Both "
+                                      "are regulating and should not be interrupted. Dysregulated by "
+                                      "unannounced change, noise, and being hurried. Recovers with "
+                                      "quiet, deep pressure and his subway maps.",
+                "meltdown_shutdown": "The build-up is visible for several minutes: he goes quiet, stops "
+                                     "answering, then covers his ears. If the demand continues he leaves "
+                                     "the room, which the school has recorded as absconding. This is "
+                                     "escape from sensory overload, not defiance. Afterwards he is "
+                                     "exhausted and apologetic, and needs recovery rather than "
+                                     "consequences.",
+                "distress_signs": "Going quiet and still is the first sign, not compliance. He rarely "
+                                  "reports pain; a sudden behaviour change has twice turned out to be "
+                                  "physical - an ear infection, and constipation.",
+                "masking": "Holds himself together across the school day and releases at home. Teachers "
+                           "describe a child with no difficulties; his mother describes ninety minutes "
+                           "of recovery every afternoon. Both accounts are accurate.",
+                "burnout": "No full burnout episode. The second half of the autumn term saw reduced "
+                           "tolerance and more frequent leaving of the classroom, following a period of "
+                           "timetable changes.",
+                "executive_daily": "Needs a visual sequence for morning routines. Transitions between "
+                                   "activities are harder than the activities. Multi-step written tasks "
+                                   "stall at step one unless numbered.",
+                "special_interests": "The city subway network in extraordinary detail - lines, "
+                                     "interchanges, rolling stock, historical closures. A genuine "
+                                     "strength, a regulation support, and the most reliable way into "
+                                     "engagement for reading and mathematics.",
+                "support_needs": "In his mother's words, and his where he offered them: 'knowing what is "
+                                 "going to happen', 'somewhere quiet at lunch', 'people not getting cross "
+                                 "when he goes quiet', and help with writing.",
+                "elopement": "Leaves the classroom during unannounced fire drills; twice this term. He "
+                             "goes to a predictable place - the library corridor - and can be found "
+                             "quickly. He does not leave the building and does seek a familiar adult. An "
+                             "agreed exit plan with a named adult is in place.",
+                "self_injury": "None. No head-banging, biting or scratching at home or school.",
+                "si_ideation": "None",
+                "risk_level": "Not applicable at this age",
+                "risk_rationale": "No suicidal ideation, self-injury or intent at age 8 on direct enquiry "
+                                  "with the child and his mother. Recorded because autistic children are "
+                                  "screened as they grow, not because concern exists today.",
+                "restraint_history": "No restraint or seclusion in school or healthcare settings. The "
+                                     "family does not consent to physical intervention and this is "
+                                     "documented in the school record.",
+                "overshadowing": "Two findings warrant assessment in their own right rather than being "
+                                 "attributed to autism: the inattention elevated on both Conners-4 forms, "
+                                 "and the sleep-onset difficulty. Both to be reassessed in six months "
+                                 "once supports are in place.",
                 "process_note": "Mother was tearful at the feedback session but said the word 'relief' "
                                 "three times. Father did not attend either session; she says he is 'not "
                                 "sure about labels'. Worth offering him a separate appointment.",
@@ -867,6 +948,349 @@ PATIENTS = [
              "scopes": ["risk", "sud"],
              "purpose": "Safety planning and involvement in care at the patient's request",
              "signed_date": _d(8), "expires_date": _d(-357)},
+        ],
+    },
+    {
+        "mrn": "MRN-00105",
+        "tags": ["Autism", "Adult diagnosis", "Healthcare access"],
+        "demographics": {
+            "first_name": "Elena", "last_name": "Duarte", "preferred_name": "",
+            "dob": "1997-03-22", "pronouns": "she/her", "sex_at_birth": "Female",
+            "phone": "(555) 660-1188", "email": "e.duarte@example.com",
+            "address": "12 Sefton Row, Springfield", "preferred_language": "English",
+            "language_preference": "identity-first",
+            "emergency_contact": {"name": "Tomas Ruiz (partner)", "phone": "(555) 660-1190"},
+            "insurance": {"carrier": "Meridian PPO", "member_id": "MP-5583201", "group_number": "GRP-5510"},
+            "employer": "Cadence Analytics - data engineer",
+        },
+        "evaluations": [
+            {"form_id": "asd_eval", "encounter_date": _d(63), "sign": True, "answers": {
+                "encounter_date": _d(63),
+                "referral_source": "Self-referred. Her younger sister was diagnosed autistic last year, "
+                                   "and Ms. Duarte recognised the description of herself. Referral was "
+                                   "supported by her primary care physician after three months of sick "
+                                   "leave that had been attributed to depression.",
+                "informants": "Ms. Duarte, primary informant across three sessions. Her partner, with "
+                              "her consent, for the final session. School reports from ages 7 and 11, "
+                              "which she had kept. Her mother declined to take part, which is noted "
+                              "because a developmental history from a caregiver was therefore "
+                              "unavailable.",
+                "chronological_age": "29 years",
+                "adjustments_made": "Questions sent in writing a week ahead. Appointments at 08:00 in a "
+                                    "room without overhead fluorescent lighting. Written follow-up after "
+                                    "each session. She was told she did not need to make eye contact.",
+                "milestones": "Motor and language milestones met on time by her own report and the "
+                              "school records. Read fluently at four. No speech delay - a common reason "
+                              "autistic girls are missed.",
+                "language_dev": "No delay. Precocious vocabulary, described in a school report at age 7 "
+                                "as 'talks like a small adult'.",
+                "social_dev": "One intense friendship at a time throughout childhood, each ending "
+                              "abruptly and without her understanding why. Played alongside rather than "
+                              "with groups. Scripted conversations in advance from adolescence, a "
+                              "strategy she still uses.",
+                "rrb_history": "Lined up and catalogued objects as a child. Re-reads the same books "
+                               "dozens of times. Has eaten the same lunch daily for six years. Distress "
+                               "at unplanned change was labelled 'sensitive' rather than investigated.",
+                "sensory_history": "Cut labels out of clothing from age five. Could not tolerate school "
+                                   "assemblies. Covered her ears at hand dryers, which the school "
+                                   "recorded as attention-seeking.",
+                "school_history": "Academically strong throughout, which is the main reason no "
+                                  "assessment was sought. Reports from ages 7 and 11 both note "
+                                  "'daydreaming', 'oversensitive' and 'does not join in'. No special "
+                                  "educational provision at any point.",
+                "co_occurring": "Diagnosed: generalised anxiety disorder (2019). Irritable bowel "
+                                "syndrome (2021). Hypermobility, under rheumatology. Chronic insomnia. "
+                                "Marked alexithymia on interview - she identifies distress by physical "
+                                "sensation rather than by emotion, which is relevant to how she will "
+                                "report symptoms to any clinician.",
+                "genetic_workup": "Not indicated. No dysmorphic features, no intellectual disability, "
+                                  "no seizures.",
+                "family_history": "Younger sister diagnosed autistic at 26. Father described by the "
+                                  "family as 'exactly the same but never assessed'.",
+                "ados_module": "Module 4",
+                "ados_scores": "ADOS-2 Module 4: Social Affect 8, Restricted and Repetitive Behaviour 2, "
+                               "overall 10, meeting the autism spectrum cut-off. Recorded with the "
+                               "caveat that Module 4 under-identifies adults who have spent decades "
+                               "learning to compensate; the score is a floor, not a ceiling.",
+                "ados_observations": "Eye contact was present, evenly timed and visibly effortful - she "
+                                     "later described counting to three before looking away. Gesture was "
+                                     "sparse and not integrated with speech. She answered questions "
+                                     "fully and asked none. Descriptions of relationships were accurate "
+                                     "about events and thin about motive.",
+                "adir": "Not administered. No caregiver was available to give a developmental history; "
+                        "school reports from ages 7 and 11 were used instead and are quoted above.",
+                "rating_scales": "SRS-2 self-report: total T-score 71. Partner-report SRS-2: T-score 68.",
+                "adult_instruments": "RAADS-R 156 (cut-off 65). AQ 38 (cut-off 32). CAT-Q 142, with the "
+                                     "compensation and masking subscales both in the top decile - the "
+                                     "clearest single finding in this assessment.",
+                "cognitive": "Not indicated. Degree-level education and current employment as a data "
+                             "engineer.",
+                "language_assessment": "Not indicated. Structural language intact; pragmatic difficulty "
+                                       "reported and observed.",
+                "adaptive": "Not formally administered. Functional interview: independent for work and "
+                            "finances, significant difficulty with unscheduled demands, phone calls, "
+                            "and self-care during high-demand periods.",
+                "comorbid_screens": "PHQ-9 11, GAD-7 14. Both elevated, and both fell during the "
+                                    "assessment period as demands reduced - which supports the "
+                                    "formulation that they are secondary.",
+                "a1": "Reduced social-emotional reciprocity, masked by preparation. Conversation is "
+                      "sustained by rehearsed questions; she reports running scripts and monitoring her "
+                      "own face throughout. She does not spontaneously share news, and describes "
+                      "reciprocal small talk as 'a second job'.",
+                "a2": "Nonverbal communication is learned rather than intuitive. Eye contact is timed "
+                      "deliberately. Gesture is sparse. She reports being told she looks 'flat' or "
+                      "'annoyed' when she is neither.",
+                "a3": "Difficulty developing and maintaining relationships. A pattern of one intense "
+                      "friendship at a time, each ending without her understanding the cause. She "
+                      "maintains her relationship with her partner through explicit agreements about "
+                      "routine and plans.",
+                "a_met": "Yes",
+                "b1": "Re-reads the same books repeatedly. Repetitive finger movements under the table "
+                      "during the assessment, which she stopped when she noticed me looking - masking "
+                      "observed in the room.",
+                "b2": "Insistence on sameness: the same lunch for six years, the same route, the same "
+                      "supermarket. Unplanned change produces immediate distress and a day of reduced "
+                      "capacity afterwards.",
+                "b3": "Deep, sustained interests in railway timetabling and in textile weaving, both "
+                      "pursued to expert level.",
+                "b4": "Hyperreactivity to fluorescent light, hand dryers and open-plan office noise. "
+                      "Hyporeactivity to interoceptive signals - she does not notice hunger, thirst or "
+                      "needing the bathroom until it is urgent, and did not recognise the onset of her "
+                      "own burnout.",
+                "b_count": "4",
+                "c_onset": "Present from early childhood. School reports at ages 7 and 11 independently "
+                           "record sensory sensitivity, not joining in, and being 'oversensitive'. "
+                           "Absence of a caregiver history does not weaken this; the contemporaneous "
+                           "documents are stronger evidence than recollection would have been.",
+                "d_impairment": "Clinically significant. Three months of sick leave, a job now at risk, "
+                                "withdrawal from all social contact outside her partner, and loss of "
+                                "self-care during the burnout period.",
+                "e_differential": "Not better explained by intellectual disability or global "
+                                  "developmental delay. Neither is present.",
+                "severity_social": "Level 1 - requiring support",
+                "severity_rrb": "Level 1 - requiring support",
+                "specifiers": "Without accompanying intellectual impairment, Without accompanying language impairment",
+                "differential": "Social anxiety disorder was considered and does not account for the "
+                                "sensory profile, the insistence on sameness, or the early school "
+                                "records; her anxiety is about specific social consequences she has "
+                                "learned to expect, and postdates the traits. Complex PTSD considered - "
+                                "no trauma history meeting criterion A. ADHD considered and remains "
+                                "possible; inattention is currently better explained by burnout and will "
+                                "be reassessed. Depression is present and secondary, improving as "
+                                "demands reduced without any change in the underlying profile. Borderline "
+                                "personality disorder had been suggested by a previous clinician; the "
+                                "stable sense of self, absence of interpersonal fear of abandonment, and "
+                                "lifelong sensory and routine profile do not support it, and this "
+                                "mislabelling is common in autistic women.",
+                "dsm_diagnoses": "F84.0 Autism spectrum disorder, without accompanying intellectual "
+                                 "impairment, without accompanying language impairment; requiring "
+                                 "support (Level 1) for social communication and for restricted, "
+                                 "repetitive behaviours\n"
+                                 "F41.1 Generalized anxiety disorder",
+                "summary": "Ms. Duarte is a 29-year-old autistic woman, diagnosed at 29 after a working "
+                           "life spent compensating. The evidence converges: RAADS-R 156, AQ 38, CAT-Q "
+                           "142 with masking in the top decile, ADOS-2 Module 4 above the spectrum "
+                           "cut-off despite decades of practice at appearing otherwise, and school "
+                           "reports from ages 7 and 11 describing the same child. Her anxiety, low mood "
+                           "and insomnia are best understood as the cost of sustained masking rather "
+                           "than as primary conditions, and the recent sick leave has the shape of "
+                           "autistic burnout rather than a depressive episode. She does not need to "
+                           "become less autistic; her environment needs to ask less of her "
+                           "performance and more of her actual strengths.",
+                "recommendations_clinical": "1. No medication change for autism, which medication does "
+                                            "not treat. Continue sertraline for anxiety at the current "
+                                            "dose and review against function rather than mood alone.\n"
+                                            "2. Burnout recovery plan: reduced demand, protected "
+                                            "recovery time, and no new commitments for eight weeks.\n"
+                                            "3. Post-diagnostic support: a structured programme for "
+                                            "adults diagnosed late, and a peer group of autistic adults.\n"
+                                            "4. Workplace adjustments letter, provided.\n"
+                                            "5. Healthcare communication passport, provided, after two "
+                                            "episodes of care in which her pain was not recognised.\n"
+                                            "6. Re-screen for ADHD once burnout has resolved.",
+                "recommendations_family": "Her partner asked what helps. Give notice of change. Accept "
+                                          "written communication on hard days. Understand that going "
+                                          "quiet is depletion, not withdrawal from him. Protect the "
+                                          "recovery time rather than filling it.",
+                "recommendations_school": "For her employer: predictable hours, written instructions, a "
+                                          "low-sensory workspace, and meetings with an agenda in "
+                                          "advance. Detail in the adjustments letter.",
+                "strengths": "Exceptional pattern recognition and precision, which is why her employer "
+                             "values her. Honest, loyal, and entirely without pretence. Deep expertise "
+                             "in two fields. Articulate about her own experience once given time to "
+                             "prepare.",
+                "special_interests": "Railway timetabling, and textile weaving, which she describes as "
+                                     "the only activity that reliably quiets her.",
+                "sensory_profile": "Sound: hyperreactive - open-plan office noise, hand dryers, "
+                                   "overlapping conversation. Light: hyperreactive to fluorescent "
+                                   "lighting, which triggers migraine. Touch: seams and labels "
+                                   "intolerable. Interoception: hyporeactive - she does not register "
+                                   "hunger, thirst or pain until they are severe. This is the single "
+                                   "most important item for any clinician seeing her.",
+                "sensory_supports": "Noise-cancelling headphones, worn most of the working day. Natural "
+                                    "light or a desk lamp rather than overhead fluorescents. Same "
+                                    "clothing repeated. Weighted blanket for recovery. Weaving.",
+                "communication_profile": "Fluent and articulate in prepared contexts. Under pressure, or "
+                                         "when tired, speech becomes effortful and she may lose it "
+                                         "altogether for short periods - situational mutism, which she "
+                                         "finds humiliating when treated as refusal. Strongly prefers "
+                                         "written communication. Interprets questions literally and will "
+                                         "answer the question asked rather than the one intended.",
+                "aac": "None formally. Text and email are her functional AAC; a note on her phone is "
+                       "used when speech is unavailable.",
+                "communication_preferences": "Ask one question at a time and allow silence. Offer to "
+                                             "take answers in writing, particularly if she has stopped "
+                                             "speaking - that is not refusal. Say what will happen and "
+                                             "in what order. Avoid 'how are you feeling?', which she "
+                                             "cannot answer; ask about the body instead - sleep, "
+                                             "appetite, pain, energy. Do not require eye contact. Send a "
+                                             "written summary afterwards.",
+                "regulation_profile": "Repetitive finger movements and weaving are regulating and should "
+                                      "not be discouraged. Dysregulated by noise, unplanned change, "
+                                      "phone calls and open-plan environments. Recovers with silence, "
+                                      "darkness, weighted pressure and time alone.",
+                "meltdown_shutdown": "Shutdown rather than meltdown: she becomes still, stops speaking "
+                                     "and cannot initiate. Previously recorded as 'uncooperative' in a "
+                                     "healthcare setting. The build-up is hours long and she can "
+                                     "usually name it in writing if asked early.",
+                "distress_signs": "Stillness and loss of speech, not agitation. Because she does not "
+                                  "register pain reliably, a change in behaviour may be the only sign "
+                                  "of a physical problem.",
+                "masking": "CAT-Q 142, with compensation and masking in the top decile. Rehearses "
+                           "conversations, mirrors others' expressions, and monitors her own face "
+                           "continuously. She estimates the effort as equivalent to a second job, and "
+                           "it is the direct cause of the burnout described below.",
+                "burnout": "Three-month episode this year: exhaustion, loss of speech for periods, loss "
+                           "of cooking and self-care skills she has had for a decade, and inability to "
+                           "tolerate previously manageable noise. Preceded by an office move to "
+                           "open-plan and a team restructure. Treated elsewhere as a depressive episode "
+                           "and did not respond to an antidepressant increase; began to lift only when "
+                           "demands were removed. Distinguishing this from depression is the single "
+                           "most useful thing in this report for her future care.",
+                "executive_daily": "Task initiation is the bottleneck, not ability. Phone calls are "
+                                   "avoided entirely. Unscheduled demands derail a day. During burnout "
+                                   "she lost cooking, laundry and appointment-keeping.",
+                "support_needs": "In her own words: 'stop making me do the social part of the job', "
+                                 "'somewhere to work that is not open-plan', 'let me answer in writing', "
+                                 "and 'believe me about pain'.",
+                "elopement": "Not applicable. No history of leaving unsafe.",
+                "self_injury": "Skin picking on the hands during high-demand periods, to the point of "
+                               "bleeding. Function is regulation and it is not suicidal in intent. She "
+                               "asked that it be recorded accurately because a previous clinician "
+                               "treated it as a suicide attempt.",
+                "si_ideation": "Passive (wish to be dead)",
+                "risk_level": "Moderate",
+                "risk_rationale": "Passive ideation during the burnout period, without plan, intent or "
+                                  "preparatory behaviour, and reducing as demands lifted. Chronic risk "
+                                  "is elevated: autistic adults without intellectual disability have "
+                                  "substantially higher rates of suicide than the general population, "
+                                  "and her alexithymia means distress will be under-reported and may "
+                                  "not look like distress. Protective: a stable relationship, work she "
+                                  "values, her sister, and the relief of an explanation. Acute risk is "
+                                  "currently moderate and falling.",
+                "safety_plan": "Written rather than verbal, at her request, and kept in a note on her "
+                               "phone. Warning signs: losing speech, skin picking, cancelling on her "
+                               "sister. Internal coping: weaving, weighted blanket, dark room. Contacts: "
+                               "partner Tomas, sister Ana - both told they can ask directly, and that "
+                               "she will answer in writing. Professional: clinic line, 988. Means: no "
+                               "firearms; medication held in weekly quantities by agreement during the "
+                               "burnout period.",
+                "restraint_history": "None.",
+                "overshadowing": "Two years of abdominal pain were attributed to anxiety before IBS was "
+                                 "diagnosed. A dental abscess was missed because she did not present as "
+                                 "in pain. Any new physical symptom warrants the same investigation it "
+                                 "would receive in a non-autistic patient - this is recorded because it "
+                                 "has already gone wrong twice.",
+                "reassessment": "6 months, or sooner at her request",
+                "followup": "4 weeks",
+                "process_note": "She cried once, at 'you have been doing all of this on purpose, every "
+                                "day, since you were seven'. Not a question for today: how much of the "
+                                "anxiety diagnosis was ever anxiety.",
+            }},
+            {"form_id": "asd_review", "encounter_date": _d(12), "sign": True, "answers": {
+                "encounter_date": _d(12),
+                "encounter_setting": "Telehealth",
+                "informants": "Ms. Duarte, by video with camera off at her request, which is her "
+                              "preference and not a sign of deterioration. Written notes sent by her "
+                              "the evening before.",
+                "adjustments_made": "Camera optional. Agenda sent in advance. Summary sent in writing "
+                                    "afterwards.",
+                "interval_history": "Seven weeks since the adjustments letter. She has returned to work "
+                                    "at three days a week with a desk in the quiet room. Speech has not "
+                                    "been lost since the move. She has resumed weaving and has seen her "
+                                    "sister twice.",
+                "supports_in_place": "Working: the quiet desk, written instructions, meetings with "
+                                     "agendas, and the agreement that she may answer in writing. Not "
+                                     "working: the 'buddy check-in' the employer added, which she "
+                                     "experiences as another social demand - recommend it is dropped. "
+                                     "Never implemented: the promised noise assessment of the open-plan "
+                                     "area.",
+                "demands_environment": "Phased return agreed to four days from next month. She has "
+                                       "asked that it not go to five. I support that.",
+                "burnout": "Substantially recovered. Cooking and laundry have returned. She describes "
+                           "capacity at 'seventy percent of before, and before was not sustainable'.",
+                "masking": "Reduced at work since disclosing to her manager, which she describes as the "
+                           "single biggest change. Still high with clients.",
+                "co_occurring": "GAD improved: GAD-7 down from 14 to 8. IBS stable. Insomnia improved "
+                                "with a consistent wake time. ADHD re-screen deferred to the next "
+                                "review now that burnout has lifted.",
+                "medication_current": "Sertraline 100 mg daily, targeting anxiety, not autism. Judged "
+                                      "against function - phone calls attempted, meetings attended - "
+                                      "rather than mood score alone.",
+                "side_effects": "None reported at this dose.",
+                "sensory_profile": "Unchanged. The quiet desk has removed the main daily exposure.",
+                "sensory_supports": "Headphones now needed only for client calls.",
+                "communication_profile": "No episodes of situational mutism in seven weeks.",
+                "communication_preferences": "Unchanged, and now documented with her employer.",
+                "regulation_profile": "Weaving most evenings. Skin picking has stopped.",
+                "meltdown_shutdown": "No shutdown since the desk move.",
+                "executive_daily": "Task initiation remains the main difficulty; a written daily order "
+                                   "of tasks from her manager has helped more than any clinical "
+                                   "intervention.",
+                "special_interests": "Weaving; has started teaching it to her sister.",
+                "support_needs": "'Keep the quiet desk. Drop the buddy scheme. Do not push me to five "
+                                 "days.'",
+                "strengths": "Precision, honesty, expertise, and - her words - 'knowing why now'.",
+                "self_injury": "Stopped.",
+                "si_ideation": "None",
+                "risk_level": "Low",
+                "risk_rationale": "No ideation in seven weeks, burnout resolving, supports in place and "
+                                  "working, relationships resumed. Chronic elevation remains and will be "
+                                  "screened at each review, with the alexithymia in mind.",
+                "safety_plan": "Reviewed, unchanged, still on her phone.",
+                "overshadowing": "No new physical symptoms this interval.",
+                "assessment": "Autistic burnout substantially resolved following environmental change "
+                              "rather than medication change, which is the finding worth carrying "
+                              "forward. Anxiety improved secondarily. The support plan is working where "
+                              "it removed demand and failing where it added a social one.",
+                "dsm_diagnoses": "F84.0 Autism spectrum disorder, Level 1 for social communication and "
+                                 "for restricted, repetitive behaviours\n"
+                                 "F41.1 Generalized anxiety disorder",
+                "treatment_plan": "1. Keep the quiet desk permanently; this is the intervention that "
+                                  "worked.\n"
+                                  "2. Drop the buddy check-in scheme.\n"
+                                  "3. Support a phased return to four days, not five.\n"
+                                  "4. Chase the noise assessment that was agreed and never done.\n"
+                                  "5. Continue sertraline unchanged.\n"
+                                  "6. Re-screen for ADHD at the next review.",
+                "recommendations_school": "Employer: make the quiet desk permanent rather than "
+                                          "temporary, drop the buddy scheme, keep agendas in advance, "
+                                          "and hold the return at four days.",
+                "recommendations_family": "Her partner has asked for nothing further. Recovery time "
+                                          "continues to be protected at home.",
+                "followup": "3 months",
+                "process_note": "She asked whether she should tell her mother. We left it open.",
+            }},
+        ],
+        "authorizations": [
+            {"recipient_name": "Cadence Analytics - People Team",
+             "recipient_type": "Education or employment support service", "scopes": [],
+             "purpose": "Reasonable adjustments in the workplace",
+             "signed_date": _d(60), "expires_date": _d(-305)},
+            {"recipient_name": "Tomas Ruiz (partner)", "recipient_type": "Family member or caregiver",
+             "scopes": ["risk"],
+             "purpose": "Involvement in care and safety planning at the patient's request",
+             "signed_date": _d(60), "expires_date": _d(-305)},
         ],
     },
 ]

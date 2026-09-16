@@ -2,11 +2,16 @@
 
 One psychiatric evaluation in. The right report out, for each person who needs one.
 
-A psychiatrist documents a session once, in a structured evaluation form. This turns
-that record into the several different documents the work actually demands — a plain-language
-summary for a family member, an accommodations letter for a school, a letter of medical
-necessity for the insurer, a consultation letter for the referring clinician — each written
-for its reader and each carrying only what that reader is entitled to see.
+A clinician documents a session once, in a structured evaluation form. This turns that record
+into the several different documents the work actually demands — a diagnostic report the family
+keeps, a letter to the school team, a healthcare communication passport for the emergency
+department, a workplace adjustments letter, a letter of medical necessity for the insurer — each
+written for its reader and each carrying only what that reader is entitled to see.
+
+It is **built around autism assessment and support**, and works for general psychiatry. Autism is
+where the fan-out problem is sharpest: one evaluation has to serve a family, a school, an
+employer, a hospital and a payer, and each needs a different subset written a different way. The
+adult, ADHD and general psychiatric forms are here too, with the same disclosure rules.
 
 Runs entirely on your machine. **Python 3.9+ standard library only — nothing to install.**
 
@@ -28,13 +33,15 @@ frontdesk    Demo!Pass3   Sam Okonkwo         front desk (demographics only)
 compliance   Demo!Pass4   Priya Nair          compliance auditor (audit log only)
 ```
 
-Four fictional patients are seeded: an adult with two visits for recurrent depression, a
-child autism evaluation, an adult ADHD evaluation, and a complex case carrying substance
-use content and elevated suicide risk. **No real patient information is included, and none
-should be entered — see "Before real use" below.**
+Five fictional patients are seeded: **Danny**, an autistic 8-year-old with a full evaluation and
+school liaison; **Elena**, diagnosed autistic at 29 after three months signed off with what was
+called depression, whose chart separates autistic burnout from a depressive episode; an adult
+with two visits for recurrent depression; an adult ADHD evaluation; and a complex case carrying
+substance use content and elevated suicide risk. **No real patient information is included, and
+none should be entered — see "Before real use" below.**
 
 ```bash
-python3 -m tests.test_all      # 96 tests: crypto vectors, access control,
+python3 -m tests.test_all      # 107 tests: crypto vectors, access control,
                                # disclosure rules, generation, assistant, HTTP end to end
 ```
 
@@ -49,16 +56,17 @@ of Adults* (3rd ed.) and the documentation payers expect for CPT 90791/90792:
 
 | Form | Contents |
 |---|---|
+| **Autism Spectrum Diagnostic Evaluation** | Developmental history along ADI-R domains, ADOS-2 module/domain totals/comparison score, ADI-R algorithm scores, SRS-2/SCQ/CARS-2 and the adult instruments (RAADS-R, AQ, CAT-Q), cognitive, language and adaptive testing, DSM-5-TR criteria A1–A3 and B1–B4 with severity levels, criteria C–E, differential, **sensory profile, communication profile and AAC, regulation and stimming, meltdown vs shutdown, masking, autistic burnout, executive function, interests and support needs**, and a safety section covering elopement, self-injury kept distinct from suicidality, and a diagnostic-overshadowing check |
+| **Autism Support Review** | Follow-up asking whether the supports are working, not whether autistic traits have reduced: what is in place, what to drop, what was promised and never implemented, burnout and masking, profile updates, and a plan that changes the environment rather than the person |
 | **Adult Initial Psychiatric Evaluation** (90792) | Chief complaint, HPI, psychiatric review of symptoms, treatment and medication-trial history, substance use, medical history and monitoring labs, family/developmental/social history, cultural formulation, the ten-domain mental status examination, structured risk assessment, quantitative measures, functional assessment, biopsychosocial formulation, DSM-5-TR diagnoses with ICD-10-CM codes, treatment plan, informed consent, capacity |
 | **Psychiatric Follow-Up / Progress Note** | Interval history, target-symptom response, adherence and adverse effects, brief MSE, risk, measures, plan changes |
-| **Autism Spectrum Diagnostic Evaluation** | Developmental history along ADI-R domains, ADOS-2 module/domain totals/comparison score, ADI-R algorithm scores, SRS-2/SCQ/CARS-2, cognitive, language and adaptive testing, DSM-5-TR criteria A1–A3 and B1–B4 with severity levels, criteria C–E, differential, educational recommendations |
 | **ADHD Diagnostic Evaluation** | DSM-5-TR symptom counts, onset before 12, cross-setting evidence, Vanderbilt/Conners/ASRS, cardiac screening before stimulants, diversion risk, monitoring plan |
 
 Several sessions accumulate into one longitudinal record. When a report is built from more
 than one visit, current-state items (mental status, risk, medications, diagnoses) take the
 most recent entry and narrative accumulates in date order.
 
-### 2. Eight recipient templates
+### 2. Eleven recipient templates
 
 Each template is a disclosure contract as much as a layout: it declares its reader, the lawful
 purpose of the disclosure, the sensitivity classes it may ever carry, how much identity to
@@ -66,6 +74,9 @@ include, and the reading level.
 
 | Template | Reader | Notable behaviour |
 |---|---|---|
+| **Autism Diagnostic Report** | Autistic person and family | The report the family keeps: plain language, strengths given their own section, support levels framed as needs rather than severity |
+| **Healthcare Communication Passport** | Hospital or other healthcare team | One page for an ED that has never met this person — communication and sensory needs first, plus an explicit warning against diagnostic overshadowing |
+| **Reasonable Adjustments Letter** | Education or employment support service | Each recommendation names the barrier it removes; risk and clinical history withheld |
 | Summary for Family / Caregiver | Support person | 8th-grade language, jargon translated in place, crisis resources attached, needs authorization |
 | After-Visit Summary | Patient | Right of access — the patient sees everything except process notes |
 | Letter to School Team (IEP / 504) | School | Functional impact and actionable accommodations; risk, substance, trauma withheld |
@@ -90,6 +101,24 @@ and **verify against chart** (every number, code, dose and date in a report is t
 the record — this is what catches an edited draft drifting from the chart).
 
 ---
+
+### 4. Written the way autistic people ask to be written about
+
+- **Identity-first or person-first, per patient.** Most autistic adults prefer "autistic person";
+  some families prefer "person with autism". It is recorded on the chart and applied to what is
+  written about them, rather than being the house style. Elena's report says autistic; Danny's
+  says child with autism.
+- **The support profile leads the chart**, not the severity label. DSM-5-TR levels are shown as
+  how much support is needed in this environment, with the note that they are not a measure of
+  ability.
+- **Self-injury is recorded separately from suicidality**, because conflating them produces the
+  wrong response — and because one demo patient asked for exactly that after a previous clinician
+  treated skin picking as a suicide attempt.
+- **Autistic burnout is distinguished from depression**, which is the difference between removing
+  demands and increasing an antidepressant.
+- **Diagnostic overshadowing gets its own field and its own warning** in the healthcare passport.
+- **Risk is still assessed** on every form that needs it, and still drives the safety machinery.
+  It simply stops being the headline on charts where it is not the issue.
 
 ## Not losing work
 
@@ -127,6 +156,7 @@ the clinician's original text and says so on the draft.
 |---|---|
 | Encryption at rest | AES-256-GCM per record (`app/crypto.py`, pinned to the FIPS-197 and NIST GCM test vectors). Fresh 96-bit nonce per write; associated data binds each ciphertext to its table and row, so a record cannot be moved between patients. Data key wrapped by PBKDF2-HMAC-SHA256, 600,000 iterations, from `PSYCHREPORT_PASSPHRASE` |
 | Minimum necessary | Every field carries a sensitivity class. A template declares what it may carry; anything else is withheld and **itemised on the draft with the reason**, so the clinician sees exactly what was left out |
+| Sensitive prose | Field tags cannot see inside free text. A clinician writing about regulation may mention self-injury in passing, and that sentence travels with the field it sits in. Generation scans included text for content the template does not otherwise carry and **warns on the draft** rather than silently deleting clinical writing |
 | 42 CFR Part 2 | Substance use content is withheld unless the patient's authorization specifically names it — including a substance use *diagnosis code* (F10–F19), which is itself Part 2 information. When it is included, the redisclosure notice is attached |
 | Psychotherapy notes | Process-note fields are excluded from every generated report and from the assistant's context, with or without an authorization. No override exists |
 | Authorizations | Per recipient, with scope, signed and expiry dates, and revocation. Release is blocked without a current one; an emergency release requires a documented reason that is written to the audit trail and the accounting of disclosures |
@@ -210,7 +240,7 @@ app/api.py          HTTP API
 app/server.py       routing, static files, security headers
 web/                single-page client, no frameworks, no external requests
 app/config.py       local vs hosted (Render) deployment mode
-tests/test_all.py   96 tests
+tests/test_all.py   107 tests
 render.yaml         Render Blueprint
 DEPLOY.md           step-by-step Render deployment
 ```

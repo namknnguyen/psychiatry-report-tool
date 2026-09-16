@@ -201,7 +201,9 @@ function sidebar() {
     <div class="pitem ${S.patient && S.patient.patient.id === p.id ? 'on' : ''}" data-a="open-patient" data-id="${p.id}">
       <div class="nm">${esc(p.name)}</div>
       <div class="mt"><span>${esc(p.mrn)}</span>${p.age != null ? `<span>${p.age}y</span>` : ''}
-        ${p.risk_level && p.risk_level !== 'Not documented' ? `<span>Risk: ${esc(p.risk_level)}</span>` : ''}
+        ${p.autistic ? '<span>Autistic</span>' : ''}
+        ${p.risk_level && ['Not documented', 'Not applicable at this age'].indexOf(p.risk_level) < 0
+          ? `<span>Risk: ${esc(p.risk_level)}</span>` : ''}
         <span>${p.evaluation_count} eval · ${p.report_count} rep</span></div>
     </div>`).join('') || '<div class="side-foot noborder" >No patients match.</div>';
   const tags = S.tags.map((t) => `<button data-a="tag" data-t="${esc(t)}" class="${S.filter.tag === t ? 'on' : ''}">${esc(t)}</button>`).join('');
@@ -241,6 +243,14 @@ function topbar() {
   </div>`;
 }
 
+function supportBadge(levels) {
+  const short = (v) => (v || '').replace(/^Level (\d).*/, 'L$1');
+  const social = short(levels && levels.social);
+  const rrb = short(levels && levels.rrb);
+  if (!social && !rrb) return '<span class="badge">Autistic</span>';
+  return `<span class="badge">Autistic · ${esc([social, rrb].filter(Boolean).join(' / '))}</span>`;
+}
+
 function riskBadge(level) {
   const cls = {Low: 'ok', Moderate: 'warn', High: 'danger', Imminent: 'danger'}[level] || 'grey';
   return `<span class="badge ${cls}">Risk: ${esc(level)}</span>`;
@@ -253,7 +263,9 @@ function homeView() {
   const cards = S.patients.map((p) => `<div class="card clickable"  data-a="open-patient" data-id="${p.id}">
       <div class="hstack gap2">
         <h3 class="m0">${esc(p.name)}</h3><span class="badge grey">${esc(p.mrn)}</span>
-        ${p.risk_level && p.risk_level !== 'Not documented' ? riskBadge(p.risk_level) : ''}</div>
+        ${p.autistic ? supportBadge(p.support_levels) : ''}
+        ${p.risk_level && ['Not documented', 'Not applicable at this age'].indexOf(p.risk_level) < 0
+          ? riskBadge(p.risk_level) : ''}</div>
       <div class="small muted my1" >${p.age != null ? p.age + ' years' : ''}
         ${p.last_encounter ? ' · last visit ' + esc(p.last_encounter) : ''}
         · ${p.evaluation_count} evaluation(s) · ${p.report_count} report(s)</div>
@@ -318,6 +330,7 @@ function overviewTab(d) {
       <button class="btn ghost sm mt2" data-a="edit-demographics" >Edit details</button>
     </div>
     <div>
+      ${d.neuro && d.neuro.autistic ? neuroCard(d.neuro) : ''}
       ${risk && risk.level !== 'Not documented' ? `<div class="card" data-tour="risk"><h3>Risk</h3>
         <p>${riskBadge(risk.level)} ${risk.date ? '<span class="small muted">documented ' + esc(risk.date) + '</span>' : ''}</p>
         ${risk.escalated ? '<div class="notice warn small">Stratification escalated by rule: documented ideation with intent, plan or an identified target.</div>' : ''}
@@ -343,6 +356,30 @@ function overviewTab(d) {
 }
 
 /* ------------------------------------------------------------ evaluations */
+
+function neuroCard(neuro) {
+  const p = neuro.profile || {};
+  const row = (label, value) => value
+    ? `<div class="mb2"><div class="small"><strong>${esc(label)}</strong></div>
+       <div class="small muted">${esc(value.length > 260 ? value.slice(0, 260) + '…' : value)}</div></div>`
+    : '';
+  return `<div class="card" data-tour="neuro"><h3>Neurodevelopmental profile</h3>
+    <p>${supportBadge(neuro.levels)}
+      ${neuro.has_passport_content ? '<span class="badge ok">passport ready</span>'
+        : '<span class="badge grey">no communication profile yet</span>'}</p>
+    <p class="small muted">DSM-5-TR support levels describe how much support is needed now, in this
+      environment. They are not a measure of ability.</p>
+    ${row('How to communicate', p.communication_preferences)}
+    ${row('Sensory', p.sensory_profile)}
+    ${row('What helps', p.sensory_supports)}
+    ${row('Regulation, meltdown and shutdown', p.meltdown_shutdown)}
+    ${row('Masking and burnout', p.burnout || p.masking)}
+    ${row('Support needs', p.support_needs)}
+    ${row('Strengths and interests', neuro.strengths || p.special_interests)}
+    ${p.overshadowing ? `<div class="notice warn small">Watch for diagnostic overshadowing —
+      ${esc(p.overshadowing.slice(0, 220))}</div>` : ''}
+  </div>`;
+}
 
 function evaluationsTab(d) {
   const rows = d.evaluations.map((e) => `<tr>
@@ -564,10 +601,12 @@ function reportBody(c, r) {
 /* -------------------------------------------------------------- assistant */
 
 const SUGGESTIONS = [
-  'What has the medication history been, and what was the response?',
+  'What are the sensory needs and what helps?',
+  'How should someone meeting this patient for the first time communicate with them?',
+  'What supports are in place, and which are working?',
+  'Is there anything being attributed to autism that needs its own assessment?',
   'Summarise the current risk picture and the safety plan.',
-  'What functional impairments are documented?',
-  'What did the most recent visit change?',
+  'What has the medication history been, and what was the response?',
   'What is missing from the record before I can sign?',
 ];
 
@@ -1140,8 +1179,8 @@ async function llmSettings() {
    rather than relying on the step before it. That is what makes Back, Next,
    and restarting mid-way all safe. */
 
-const TOUR_PATIENT = 'MRN-00101';
-const TOUR_TEMPLATES = ['family_caregiver', 'insurance_lmn', 'employer_accommodation'];
+const TOUR_PATIENT = 'MRN-00102';
+const TOUR_TEMPLATES = ['autism_report', 'school_iep', 'healthcare_passport'];
 const Tour = {steps: [], i: 0, active: false, busy: false, target: null};
 /* Waits for layout to settle before measuring. requestAnimationFrame is paused
    while a tab or pane is hidden, so a timer guarantees the tour never stalls. */
@@ -1209,28 +1248,28 @@ async function tourReport(templateId) {
 
 const TOUR_CLINICAL = [
   {id: 'welcome', title: 'Welcome to PsychReport', target: null, prepare: tourHome,
-   body: '<p>PsychReport turns one psychiatric evaluation into the different documents each person in a patient’s care needs — each written for its reader, each carrying only what that reader is entitled to see.</p><p>This tour uses the fictional demo patients. Along the way it creates three draft reports for Maya Ellison. Nothing is signed or released.</p>'},
+   body: '<p>PsychReport turns one evaluation into the different documents each person around a patient needs — each written for its reader, each carrying only what that reader is entitled to see.</p><p>It is built around autism assessment and support, and works for general psychiatry too. This tour follows Danny Okafor, an autistic 8-year-old, and creates three drafts for him. Nothing is signed or released.</p>'},
   {id: 'patients', title: 'Patients', target: '[data-tour="patients"], [data-tour="patient-cards"]', prepare: tourHome,
    body: '<p>Patients are grouped by tag and searchable by name, MRN or tag. Each row shows the documented risk level and how many evaluations and reports the chart holds.</p>'},
-  {id: 'risk', title: 'Risk comes first', target: '[data-tour="risk"]', prepare: () => tourPatient(TOUR_PATIENT, 'overview'),
-   body: '<p>Opening a chart surfaces the current suicide-risk stratification and safety plan, taken from the most recent visit.</p><p>Gaps — moderate risk with no safety plan, or an identified potential victim with no duty-to-warn analysis — are flagged here in red.</p>'},
+  {id: 'profile', title: 'The support profile leads', target: '[data-tour="neuro"]', prepare: () => tourPatient(TOUR_PATIENT, 'overview'),
+   body: '<p>A diagnosis says someone is autistic. This says what they need: how to communicate with them, their sensory profile, what helps, and what distress looks like before it peaks.</p><p>Support levels sit here rather than at the top of the chart, because they describe how much support is needed in this environment — not ability.</p><p>Risk is still assessed and still shown; it just stops being the headline for every patient.</p>'},
   {id: 'evaluations', title: 'Sessions accumulate', target: '[data-tour="evaluations"]', prepare: () => tourPatient(TOUR_PATIENT, 'evaluations'),
-   body: '<p>Maya has two visits: an initial evaluation structured on the APA practice guideline, and a follow-up note.</p><p>A report can be built from one visit or several. Current-state items such as mental status, risk and medication come from the latest visit; narrative accumulates in date order.</p>'},
+   body: '<p>Danny\'s chart holds an autism evaluation: developmental history, ADOS-2 and ADI-R scores, sensory and communication profile, and each DSM-5-TR criterion with the evidence for it.</p><p>Autistic patients get a support review at follow-up rather than a symptom-reduction note. Adults, ADHD and general psychiatric evaluations use their own forms, and reports can be built from one visit or several.</p>'},
   {id: 'templates', title: 'Choose who each report is for', target: '[data-tour="templates"]', prepare: tourGenerate,
-   body: '<p>Each card is a recipient. Three are selected: a family summary, a letter of medical necessity for the insurer, and a workplace accommodation letter.</p><p>Every template is also a disclosure rule. The badge shows whether the signed authorization that recipient requires is on file.</p>'},
+   body: '<p>Each card is a recipient. Three are selected: the autism diagnostic report for the family, a letter to the school team, and a healthcare communication passport.</p><p>Every template is also a disclosure rule. The badge shows whether the signed authorization that recipient requires is on file.</p>'},
   {id: 'generate', title: 'One chart, several documents', target: '[data-a="generate"]', prepare: tourGenerate,
    nextLabel: 'Generate the drafts',
    body: '<p>One click composes all three drafts from the same record. Composition is deterministic: the clinician’s own words, selected and framed for each reader. Nothing is invented.</p>'},
-  {id: 'report', title: 'A draft, written for its reader', target: '[data-tour="report"]', prepare: () => tourReport('family_caregiver'),
-   body: '<p>The family summary uses plain language, explains clinical terms in place, and attaches crisis resources.</p><p>Under every section, <em>Source</em> names the visit and field each statement came from. The document stays a watermarked draft until a clinician signs it.</p>'},
-  {id: 'withheld', title: 'What was left out, and why', target: '[data-tour="withheld"]', prepare: () => tourReport('family_caregiver'),
-   body: '<p>Substance use, trauma, legal and family genetic history are withheld from a family member unless the patient’s authorization names them. Each omission is listed with its reason.</p><p>Psychotherapy process notes never leave. There is no override.</p>'},
-  {id: 'employer', title: 'Same chart, different reader', target: '[data-tour="report"]', prepare: () => tourReport('employer_accommodation'),
-   body: '<p>The employer letter describes functional limitations and the accommodations recommended — and deliberately contains <strong>no diagnosis</strong>, which an employer is not entitled to.</p>'},
-  {id: 'actions', title: 'Nothing leaves without a signature', target: '[data-tour="report-actions"]', prepare: () => tourReport('family_caregiver'),
+  {id: 'report', title: 'The report the family keeps', target: '[data-tour="report"]', prepare: () => tourReport('autism_report'),
+   body: '<p>Plain language, terms like masking and shutdown explained in place, strengths given their own section, and support levels presented as needs rather than severity.</p><p>Danny\'s family prefers person-first wording, so the report says “child with autism”. Elena Duarte prefers identity-first, and hers says “autistic”. It is recorded per patient.</p><p>Under every section, <em>Source</em> names the visit and field each statement came from.</p>'},
+  {id: 'withheld', title: 'What was left out, and why', target: '[data-tour="withheld"]', prepare: () => tourReport('school_iep'),
+   body: '<p>This is the school letter. The school gets functional impact and actionable accommodations; risk content, substance use, trauma and family genetic history are withheld, each omission listed with its reason.</p><p>Psychotherapy process notes never leave. There is no override.</p>'},
+  {id: 'passport', title: 'Same chart, different reader', target: '[data-tour="report"]', prepare: () => tourReport('healthcare_passport'),
+   body: '<p>The healthcare passport is one page for an emergency department that has never met him. Communication and sensory needs come first, because that is what matters in the first five minutes.</p><p>It carries an explicit warning against diagnostic overshadowing — autistic people\'s pain is routinely missed when a change in behaviour gets attributed to autism.</p>'},
+  {id: 'actions', title: 'Nothing leaves without a signature', target: '[data-tour="report-actions"]', prepare: () => tourReport('autism_report'),
    body: '<p><strong>Verify against chart</strong> confirms every number, dose, code and date is traceable to the record.</p><p>Signing requires an attestation and locks the document; a correction becomes an amended version. Release is blocked without a valid authorization, and every release is logged.</p>'},
   {id: 'assistant', title: 'An assistant that stays inside the record', target: '[data-tour="assistant"]', prepare: () => tourPatient(TOUR_PATIENT, 'assistant'),
-   body: '<p>The assistant answers questions about this one patient’s chart and reports, quoting the record with citations. It declines clinical directives and never sees process notes.</p><p>Try a suggested question after the tour.</p>'},
+   body: '<p>The assistant answers questions about this one patient’s chart and reports, quoting the record with citations. It declines clinical directives and never sees process notes.</p><p>The suggested questions are the ones that come up in autism care: what the sensory needs are, how to communicate with this person, which supports are working, and whether anything is being attributed to autism that deserves its own assessment.</p>'},
   {id: 'authorizations', title: 'Authorizations and disclosures', target: '[data-tour="authorizations"]', prepare: () => tourPatient(TOUR_PATIENT, 'authorizations'),
    body: '<p>Authorizations record who may receive what, and until when. Revoking one blocks further releases immediately.</p><p>Further down, the accounting of disclosures is the list a patient is entitled to request.</p>'},
   {id: 'controls', title: 'Safeguards you can inspect', target: '[data-tour="controls"]', prepare: openAudit,
@@ -1238,7 +1277,7 @@ const TOUR_CLINICAL = [
   {id: 'audit', title: 'A tamper-evident audit trail', target: '[data-tour="audit"]', prepare: openAudit,
    body: '<p>Every access, generation, signature and release is logged. Each entry carries the hash of the one before it, so editing or deleting a row breaks the chain — and the check here reports it.</p>'},
   {id: 'finish', title: 'That’s the core loop', target: null, prepare: () => tourPatient('MRN-00104', 'overview'),
-   body: '<p>A good next step: <strong>Thomas Whitfield</strong>, open behind this card, has elevated risk and substance use content. Generate his insurer letter and his school letter, and compare what the 42 CFR Part 2 rules let each one carry.</p><p>Restart the tour any time from <strong>Tour</strong> at the top right.</p>'},
+   body: '<p>Two good next steps.</p><p><strong>Elena Duarte</strong> was diagnosed autistic at 29 after three months signed off with what was called depression. Her chart separates autistic burnout from depression, and her adjustments letter is what got her back to work.</p><p><strong>Thomas Whitfield</strong>, open behind this card, is the general-psychiatry case: bipolar I with substance use content and elevated risk. Generate his insurer letter and his school letter and compare what the 42 CFR Part 2 rules let each carry.</p><p>Restart the tour any time from <strong>Tour</strong>.</p>'},
 ];
 
 const TOUR_STAFF = [
