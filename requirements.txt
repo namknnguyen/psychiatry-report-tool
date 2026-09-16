@@ -1,0 +1,2 @@
+# PsychReport uses only the Python standard library.
+# This file exists so the platform's default build step (pip install -r) succeeds.

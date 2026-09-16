@@ -1,0 +1,19 @@
+# Render Blueprint - https://render.com/docs/blueprint-spec
+#
+# Deploys PsychReport as a public demonstration with fictional data only.
+# The start command's --hosted flag binds 0.0.0.0:$PORT, marks cookies Secure,
+# sends HSTS, and erases + reseeds the database on every start.
+services:
+  - type: web
+    name: psychreport-demo
+    runtime: python
+    plan: free                  # Starter or above is noticeably faster; see DEPLOY.md
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m app.main --hosted
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: PSYCHREPORT_PASSPHRASE
+        generateValue: true     # Render creates a random secret; never commit one
